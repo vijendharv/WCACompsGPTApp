@@ -1,0 +1,28 @@
+name: Daily WCA report
+
+on:
+  schedule:
+    # 8:00 AM Pacific (PDT, UTC-7). Use 0 16 * * * during PST (UTC-8).
+    - cron: '0 15 * * *'
+  workflow_dispatch:
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run report and email
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: python -m wca_comps.cli --email-to vontelav@gmail.com
