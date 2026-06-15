@@ -1,0 +1,10 @@
+# Python virtual environment
+.venv
+
+# Bytecode cache directories
+__pycache__/
+
+# Compiled Python files
+*.pyc
+
+.DS_Store
