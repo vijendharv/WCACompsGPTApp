@@ -46,10 +46,21 @@ Inputs:
 {
   "wca_id": "2023VONT01",
   "person_name": "Saharsh Sai Vontela",
-  "regions": ["Washington", "Oregon", "British Columbia"],
-  "from_date": "2026-08-01"
+  "regions": ["Washington", "Oregon", "British Columbia"]
 }
 ```
+
+| Input | Required | Behavior |
+| --- | --- | --- |
+| `wca_id` | Yes | WCA competitor ID to check |
+| `person_name` | No | Optional display name for the result |
+| `regions` | No | Regions to search; defaults to Washington, Oregon, and British Columbia |
+| `from_date` | No | Earliest competition date in `YYYY-MM-DD` format; defaults to the current date at request time |
+
+For example, a user can explicitly search from a future date by passing
+`"from_date": "2026-08-01"`. When the field is omitted or `null`, the MCP
+server must calculate the current date for that request rather than relying on
+a server-startup default.
 
 Output fields should include:
 
@@ -142,7 +153,34 @@ Useful controls include region filters, category tabs, and a refresh action. The
 
 ## Deployment architecture
 
-Deploy the Python MCP server to a host that provides a stable public HTTPS endpoint, such as Google Cloud Run, Render, Railway, or Fly.io.
+### Recommended free MVP: Koyeb
+
+Deploy the Python MCP server as a Koyeb Web Service using Koyeb's Free
+Instance. Koyeb supports Python and Docker deployments and provides the public
+HTTPS endpoint required by ChatGPT.
+
+The free instance currently provides 512 MB RAM, 0.1 vCPU, and 2 GB SSD. That
+is sufficient for this stateless, network-bound service because the application
+mostly waits for responses from the WCA API and does not run an AI model.
+
+Suggested deployment flow:
+
+1. Add a production `Dockerfile` that listens on Koyeb's assigned `PORT`.
+2. Connect Koyeb to the `WCACompsGPTApp` GitHub repository.
+3. Create one Web Service using the Free Instance type.
+4. Configure the health check and expose the MCP route at `/mcp`.
+5. Store `RESEND_API_KEY` as a Koyeb secret only if email delivery is enabled.
+6. Connect ChatGPT Developer Mode to `https://<service-domain>/mcp`.
+
+The free instance scales down to zero after one hour without traffic, so the
+first request after an idle period may have additional cold-start latency. This
+is acceptable for private development and MVP testing, but it is not a
+production uptime guarantee. The server must remain stateless because local
+storage is not a durable data store.
+
+Koyeb is the preferred zero-cost MVP option. A paid always-on service such as
+Google Cloud Run, Render, Railway, or Fly.io can be considered later if cold
+starts or public-app reliability become a problem.
 
 Production requirements:
 
@@ -179,6 +217,8 @@ Production requirements:
 Important scenarios:
 
 - Invalid WCA ID
+- `from_date` omitted or `null`, using the current date at request time
+- Explicit future `from_date`
 - No competitions found
 - WCA API unavailable
 - Registration not open yet
@@ -191,7 +231,8 @@ Important scenarios:
 
 ### Milestone 1 — Structured application core
 
-- Parameterize competitor, regions, and date.
+- Parameterize competitor and regions.
+- Make `from_date` optional and resolve an omitted or `null` value to the current date at request time.
 - Add stable structured result models.
 - Add validation, concurrency, caching, and tests.
 
@@ -209,7 +250,10 @@ Important scenarios:
 
 ### Milestone 4 — Private deployment
 
-- Deploy to a stable HTTPS host.
+- Add a production Dockerfile and health endpoint.
+- Deploy the MCP server to a Koyeb Free Instance.
+- Document and test scale-to-zero cold-start behavior.
+- Verify the public HTTPS `/mcp` endpoint.
 - Connect through ChatGPT Developer Mode.
 - Measure latency and iterate on tool descriptions and results.
 
