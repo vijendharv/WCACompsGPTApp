@@ -24,6 +24,7 @@ The code is decomposed into small, single-responsibility modules:
 | `wca_comps/validation.py`    | Runtime validation for WCA IDs, dates, and supported regions.   |
 | `wca_comps/serializers.py`   | Stable JSON-ready result schemas for app/MCP consumers.         |
 | `wca_comps/search.py`        | Validated structured search workflow for future MCP tools.      |
+| `wca_comps/mcp_server.py`    | Read-only MCP server exposing `search_wca_competitions`.        |
 | `wca_comps/errors.py`        | Typed application errors for validation, no results, upstreams. |
 | `wca_comps/competitions.py`  | Fetch upcoming competitions and filter them by region.          |
 | `wca_comps/registrations.py` | Check a person's registration via the public WCIF endpoint.     |
@@ -75,6 +76,41 @@ payload = search_competitions(
 The returned payload is JSON-ready and intended to back the planned
 `search_wca_competitions` MCP tool.
 
+## MCP server
+
+Milestone 2 adds a read-only MCP server using the official Python `mcp` SDK.
+It exposes one tool:
+
+| Tool | Purpose |
+| --- | --- |
+| `search_wca_competitions` | Find upcoming WCA competitions in supported regions and assess public registration/eligibility for a WCA ID. |
+
+Tool behavior:
+
+- Inputs: `wca_id` is required; `person_name`, `regions`, and `from_date` are
+  optional.
+- `from_date` defaults at request time when omitted or `null`.
+- The tool is annotated with `readOnlyHint: true` and `openWorldHint: true`.
+- Results use a structured output schema with `query`, `summary`, `groups`,
+  and `competitions`.
+- Validation, no-result, and upstream failures are returned as typed MCP tool
+  errors with a JSON payload containing at least `code` and `message`.
+
+Run over stdio for local MCP Inspector usage:
+
+```bash
+python -m wca_comps.mcp_server
+```
+
+Run the Streamable HTTP endpoint at `/mcp`:
+
+```bash
+MCP_TRANSPORT=streamable-http PORT=8000 python -m wca_comps.mcp_server
+```
+
+The module also exports `app` for ASGI servers and `create_mcp_server()` for
+tests or custom hosting.
+
 ## Setup
 
 ```bash
@@ -120,9 +156,9 @@ python -m unittest discover -s tests
 python -m compileall wca_comps tests
 ```
 
-The Milestone 1 tests cover input validation, runtime date defaults, supported
-region selection, short-lived caching, concurrent WCIF lookup, and structured
-grouping behavior.
+The tests cover input validation, runtime date defaults, supported region
+selection, short-lived caching, concurrent WCIF lookup, structured grouping
+behavior, and the MCP tool schema/annotations/error handling.
 
 ## Emailing the report
 
