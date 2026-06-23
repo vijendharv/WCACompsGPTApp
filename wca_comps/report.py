@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timezone
 from html import escape
 
@@ -38,14 +39,26 @@ def build_assessments(
     wca_id: str,
     start_from: date,
     now: datetime | None = None,
+    max_registration_workers: int = 8,
 ) -> list[CompetitionAssessment]:
     """Fetch comps in the regions and assess each for the given person."""
     now = now or datetime.now(timezone.utc)
     pairs = competition_service.upcoming_in_regions(regions, start_from)
 
     assessments: list[CompetitionAssessment] = []
-    for region, comp in pairs:
-        reg = registration_service.check(comp.id, wca_id)
+    if not pairs:
+        return assessments
+
+    worker_count = max(1, min(max_registration_workers, len(pairs)))
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        registrations = list(
+            executor.map(
+                lambda pair: registration_service.check(pair[1].id, wca_id),
+                pairs,
+            )
+        )
+
+    for (region, comp), reg in zip(pairs, registrations):
         state = comp.registration_state(now)
         can_register, reason = _eligibility(comp, reg, state, now)
         assessments.append(
@@ -125,14 +138,20 @@ def _group(
     list[CompetitionAssessment],
 ]:
     """Split assessments into (registered, can_register, cannot)."""
-    registered = [a for a in assessments if a.registration.is_registered]
+    registered = [
+        a
+        for a in assessments
+        if a.registration.is_registered and a.registration.status != "deleted"
+    ]
     can_register = [
-        a for a in assessments if not a.registration.is_registered and a.can_register
+        a
+        for a in assessments
+        if a not in registered and a.can_register
     ]
     cannot = [
         a
         for a in assessments
-        if not a.registration.is_registered and not a.can_register
+        if a not in registered and not a.can_register
     ]
     return registered, can_register, cannot
 
