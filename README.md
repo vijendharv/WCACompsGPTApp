@@ -23,7 +23,7 @@ The code is decomposed into small, single-responsibility modules:
 | `wca_comps/models.py`        | Typed data classes for API entities + parsing helpers.          |
 | `wca_comps/validation.py`    | Runtime validation for WCA IDs, dates, and supported regions.   |
 | `wca_comps/serializers.py`   | Stable JSON-ready result schemas for app/MCP consumers.         |
-| `wca_comps/search.py`        | Validated structured search workflow for future MCP tools.      |
+| `wca_comps/search.py`        | Validated structured search workflow for MCP tools.             |
 | `wca_comps/mcp_server.py`    | Read-only MCP server exposing `search_wca_competitions`.        |
 | `wca_comps/errors.py`        | Typed application errors for validation, no results, upstreams. |
 | `wca_comps/competitions.py`  | Fetch upcoming competitions and filter them by region.          |
@@ -32,15 +32,16 @@ The code is decomposed into small, single-responsibility modules:
 | `wca_comps/notify.py`        | **Email** — send the report via the Resend HTTP API.            |
 | `wca_comps/cli.py`           | Command-line entrypoint wiring everything together.             |
 
-Dependencies flow one way: `cli → report → {competitions, registrations} →
-networking`. Only `networking` touches the network, so the rest is easy to test
-and reuse.
+Dependencies stay layered so the CLI and MCP adapter reuse the same core:
+`cli → report → {competitions, registrations} → networking` for human-readable
+reports, and `mcp_server → search → report → {competitions, registrations} →
+networking` for structured tool results. WCA API access is isolated in
+`networking`; Resend email delivery is isolated in `notify`.
 
 ## Current core behavior
 
-Milestone 1 of the ChatGPT App migration is implemented in the Python core.
-The CLI still prints the human-readable report, while `wca_comps.search` now
-provides the structured workflow that the future MCP server should call.
+The CLI prints a human-readable report, while `wca_comps.search` provides the
+structured workflow used by the MCP server.
 
 Important details:
 
@@ -73,13 +74,13 @@ payload = search_competitions(
 )
 ```
 
-The returned payload is JSON-ready and intended to back the planned
-`search_wca_competitions` MCP tool.
+The returned payload is JSON-ready and backs the `search_wca_competitions` MCP
+tool.
 
 ## MCP server
 
-Milestone 2 adds a read-only MCP server using the official Python `mcp` SDK.
-It exposes one tool:
+The project includes a read-only MCP server using the official Python `mcp`
+SDK. It exposes one tool:
 
 | Tool | Purpose |
 | --- | --- |
