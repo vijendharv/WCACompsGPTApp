@@ -9,8 +9,9 @@ different transport if needed.
 from __future__ import annotations
 
 import time
+from threading import Lock, local
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import urlencode, urljoin
 
 import requests
 
@@ -47,16 +48,22 @@ class WCAClient:
         timeout: int = DEFAULT_TIMEOUT,
         max_retries: int = 3,
         backoff_seconds: float = 1.5,
+        cache_ttl_seconds: float = 60,
         session: requests.Session | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/") + "/"
         self.timeout = timeout
         self.max_retries = max_retries
         self.backoff_seconds = backoff_seconds
-        self.session = session or requests.Session()
-        self.session.headers.update(
-            {"User-Agent": DEFAULT_USER_AGENT, "Accept": "application/json"}
-        )
+        self.cache_ttl_seconds = cache_ttl_seconds
+        self._headers = {"User-Agent": DEFAULT_USER_AGENT, "Accept": "application/json"}
+        self._provided_session = session
+        self._thread_local = local()
+        if session is not None:
+            session.headers.update(self._headers)
+        self.session = session or self._new_session()
+        self._cache: dict[str, tuple[float, Any]] = {}
+        self._cache_lock = Lock()
 
     def get_json(
         self, path: str, params: dict[str, Any] | None = None
@@ -67,11 +74,16 @@ class WCAClient:
         Raises :class:`WCAApiError` on persistent failure.
         """
         url = urljoin(self.base_url, path.lstrip("/"))
+        cache_key = self._cache_key(url, params)
+        cached = self._get_cached(cache_key)
+        if cached is not None:
+            return cached
+
         last_error: Exception | None = None
 
         for attempt in range(1, self.max_retries + 1):
             try:
-                response = self.session.get(
+                response = self._get_session().get(
                     url, params=params, timeout=self.timeout
                 )
             except requests.RequestException as exc:  # network-level failure
@@ -79,11 +91,13 @@ class WCAClient:
             else:
                 if response.status_code == 200:
                     try:
-                        return response.json()
+                        payload = response.json()
                     except ValueError as exc:
                         raise WCAApiError(
                             f"Invalid JSON from {url}: {exc}"
                         ) from exc
+                    self._set_cached(cache_key, payload)
+                    return payload
                 # 429/5xx are worth retrying; 4xx (other) are not.
                 if response.status_code not in (429, 500, 502, 503, 504):
                     raise WCAApiError(
@@ -99,6 +113,45 @@ class WCAClient:
         raise WCAApiError(
             f"GET {url} failed after {self.max_retries} attempts: {last_error}"
         )
+
+    def _cache_key(self, url: str, params: dict[str, Any] | None) -> str:
+        if not params:
+            return url
+        pairs = sorted((str(key), str(value)) for key, value in params.items())
+        return f"{url}?{urlencode(pairs)}"
+
+    def _get_cached(self, key: str) -> Any | None:
+        if self.cache_ttl_seconds <= 0:
+            return None
+        with self._cache_lock:
+            entry = self._cache.get(key)
+            if entry is None:
+                return None
+            expires_at, payload = entry
+            if expires_at <= time.monotonic():
+                del self._cache[key]
+                return None
+            return payload
+
+    def _set_cached(self, key: str, payload: Any) -> None:
+        if self.cache_ttl_seconds <= 0:
+            return
+        with self._cache_lock:
+            self._cache[key] = (time.monotonic() + self.cache_ttl_seconds, payload)
+
+    def _new_session(self) -> requests.Session:
+        session = requests.Session()
+        session.headers.update(self._headers)
+        return session
+
+    def _get_session(self) -> requests.Session:
+        if self._provided_session is not None:
+            return self._provided_session
+        thread_session = getattr(self._thread_local, "session", None)
+        if thread_session is None:
+            thread_session = self._new_session()
+            self._thread_local.session = thread_session
+        return thread_session
 
     def get_paginated(
         self, path: str, params: dict[str, Any] | None = None, per_page: int = 100

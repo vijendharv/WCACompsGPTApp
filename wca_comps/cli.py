@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-from datetime import date
 
 from .competitions import CompetitionService
 from .config import (
@@ -19,6 +18,8 @@ from .networking import WCAClient, WCAApiError
 from .notify import EmailError, send_email
 from .registrations import RegistrationService
 from .report import build_assessments, render_html, render_text
+from .errors import InputValidationError
+from .validation import parse_from_date, validate_wca_id
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -36,7 +37,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--from-date",
-        default=date.today().isoformat(),
+        default=None,
         help="Only consider competitions starting on/after this date (YYYY-MM-DD)",
     )
     parser.add_argument(
@@ -53,9 +54,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
-        start_from = date.fromisoformat(args.from_date)
-    except ValueError:
-        print(f"Invalid --from-date: {args.from_date}", file=sys.stderr)
+        wca_id = validate_wca_id(args.wca_id)
+        start_from = parse_from_date(args.from_date)
+    except InputValidationError as exc:
+        print(f"Invalid input: {exc}", file=sys.stderr)
         return 2
 
     client = WCAClient()
@@ -67,14 +69,14 @@ def main(argv: list[str] | None = None) -> int:
             competition_service,
             registration_service,
             REGIONS,
-            args.wca_id,
+            wca_id,
             start_from,
         )
     except WCAApiError as exc:
         print(f"WCA API error: {exc}", file=sys.stderr)
         return 1
 
-    report = render_text(assessments, args.name, args.wca_id)
+    report = render_text(assessments, args.name, wca_id)
     print(report)
 
     if args.email_to:
@@ -86,8 +88,8 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
-        subject = f"WCA comps {args.from_date} - {args.name}"
-        html = render_html(assessments, args.name, args.wca_id)
+        subject = f"WCA comps {start_from.isoformat()} - {args.name}"
+        html = render_html(assessments, args.name, wca_id)
         try:
             send_email(subject, report, args.email_to, api_key, html=html)
         except EmailError as exc:

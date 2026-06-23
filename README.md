@@ -21,6 +21,10 @@ The code is decomposed into small, single-responsibility modules:
 | `wca_comps/config.py`        | Static config: API URL, target regions, default person.         |
 | `wca_comps/networking.py`    | **Networking** — HTTP client (GET, retries, pagination, TLS).   |
 | `wca_comps/models.py`        | Typed data classes for API entities + parsing helpers.          |
+| `wca_comps/validation.py`    | Runtime validation for WCA IDs, dates, and supported regions.   |
+| `wca_comps/serializers.py`   | Stable JSON-ready result schemas for app/MCP consumers.         |
+| `wca_comps/search.py`        | Validated structured search workflow for future MCP tools.      |
+| `wca_comps/errors.py`        | Typed application errors for validation, no results, upstreams. |
 | `wca_comps/competitions.py`  | Fetch upcoming competitions and filter them by region.          |
 | `wca_comps/registrations.py` | Check a person's registration via the public WCIF endpoint.     |
 | `wca_comps/report.py`        | Orchestrate the services, compute eligibility, render output.   |
@@ -30,6 +34,46 @@ The code is decomposed into small, single-responsibility modules:
 Dependencies flow one way: `cli → report → {competitions, registrations} →
 networking`. Only `networking` touches the network, so the rest is easy to test
 and reuse.
+
+## Current core behavior
+
+Milestone 1 of the ChatGPT App migration is implemented in the Python core.
+The CLI still prints the human-readable report, while `wca_comps.search` now
+provides the structured workflow that the future MCP server should call.
+
+Important details:
+
+- `from_date` is optional. When it is omitted or `None`, the current date is
+  resolved at request/runtime, not at server startup or module import time.
+- WCA IDs are normalized to uppercase and must match the WCA ID format, for
+  example `2023VONT01`.
+- Supported regions are currently `Washington`, `Oregon`, and
+  `British Columbia`; region names are matched case-insensitively.
+- Competition list and public WCIF responses are cached for 60 seconds by
+  default in `WCAClient`. Pass `cache_ttl_seconds=0` to disable caching, such
+  as in tests or freshness debugging.
+- WCIF registration checks are fetched concurrently by `build_assessments`,
+  which keeps the final competition order stable while reducing total latency.
+- Deleted registrations are not grouped as "Already registered"; they are
+  assessed by the normal registration-window eligibility rules.
+- Structured output includes the original query, summary counts, grouped
+  results, and a flat `competitions` list.
+
+Example structured search call:
+
+```python
+from wca_comps.search import search_competitions
+
+payload = search_competitions(
+    wca_id="2023VONT01",
+    person_name="Saharsh Sai Vontela",
+    regions=["Washington", "Oregon", "British Columbia"],
+    from_date=None,
+)
+```
+
+The returned payload is JSON-ready and intended to back the planned
+`search_wca_competitions` MCP tool.
 
 ## Setup
 
@@ -62,6 +106,23 @@ python -m wca_comps.cli --email-to vontelav@gmail.com
 Output is grouped into **Already registered**, **Can register (open, not yet
 registered)**, and **Not currently registerable**, with dates, venue, events,
 competitor counts, registration windows, and links for each competition.
+
+Invalid input exits with status code `2` and prints a validation message. WCA
+API failures exit with status code `1`.
+
+## Testing
+
+The project uses the standard-library `unittest` runner for the current core
+tests.
+
+```bash
+python -m unittest discover -s tests
+python -m compileall wca_comps tests
+```
+
+The Milestone 1 tests cover input validation, runtime date defaults, supported
+region selection, short-lived caching, concurrent WCIF lookup, and structured
+grouping behavior.
 
 ## Emailing the report
 
