@@ -111,6 +111,9 @@ MCP_TRANSPORT=streamable-http PORT=8000 python -m wca_comps.mcp_server
 The module also exports `app` for ASGI servers and `create_mcp_server()` for
 tests or custom hosting.
 
+For step-by-step local testing, see
+[`docs/LOCAL_MCP_TESTING.md`](docs/LOCAL_MCP_TESTING.md).
+
 ## Setup
 
 ```bash
