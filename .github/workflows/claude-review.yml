@@ -7,6 +7,10 @@ on:
 jobs:
   review:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
     steps:
       - uses: anthropics/claude-code-action@v1
         with:
