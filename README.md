@@ -213,7 +213,8 @@ registration, and render-tool behavior.
 ## Pull request review
 
 Pull requests run the `Code Review` GitHub Actions workflow when opened or
-updated. The workflow requires the repository secret `ANTHROPIC_API_KEY`.
+updated. The workflow requires the repository secret `ANTHROPIC_API_KEY` and
+is expected to post review feedback on the pull request.
 
 ## Milestone status
 
