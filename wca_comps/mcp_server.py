@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from mcp.server.fastmcp import FastMCP
@@ -15,6 +16,9 @@ from .errors import InputValidationError, NoResultsError, UpstreamServiceError
 from .search import search_competitions
 
 SERVER_NAME = "WCA Competition Finder"
+WIDGET_RESOURCE_URI = "ui://widget/competition-results-v1.html"
+WIDGET_MIME_TYPE = "text/html;profile=mcp-app"
+WIDGET_HTML_PATH = Path(__file__).resolve().parent.parent / "public" / "competition-results-widget.html"
 SERVER_INSTRUCTIONS = (
     "Use this server to find upcoming World Cube Association competitions, "
     "check public registration status for a WCA ID, and explain registration "
@@ -147,6 +151,21 @@ def search_wca_competitions_handler(
     return SearchWCACompetitionsResult.model_validate(payload)
 
 
+def render_competition_results_handler(
+    prepared_result: Annotated[
+        SearchWCACompetitionsResult,
+        Field(
+            description=(
+                "A structured search_wca_competitions result to render. "
+                "This tool does not refetch WCA data."
+            )
+        ),
+    ],
+) -> SearchWCACompetitionsResult:
+    """Render prepared competition results as a ChatGPT widget."""
+    return prepared_result
+
+
 def create_mcp_server() -> FastMCP:
     """Create and configure the WCA Comps MCP server."""
     server = FastMCP(
@@ -157,6 +176,32 @@ def create_mcp_server() -> FastMCP:
         streamable_http_path="/mcp",
         stateless_http=True,
     )
+    server.resource(
+        WIDGET_RESOURCE_URI,
+        name="competition_results_widget",
+        title="Competition results widget",
+        description="Responsive grouped WCA competition cards.",
+        mime_type=WIDGET_MIME_TYPE,
+        meta={
+            "ui": {
+                "prefersBorder": True,
+                "csp": {
+                    "connectDomains": [],
+                    "resourceDomains": [],
+                },
+            },
+            "openai/widgetDescription": (
+                "Grouped WCA competition cards with registration status, "
+                "capacity, region filtering, and official WCA links."
+            ),
+            "openai/widgetPrefersBorder": True,
+            "openai/widgetCSP": {
+                "connect_domains": [],
+                "resource_domains": [],
+                "redirect_domains": ["https://www.worldcubeassociation.org"],
+            },
+        },
+    )(_competition_results_widget_html)
     server.tool(
         name="search_wca_competitions",
         title="Search WCA competitions",
@@ -167,7 +212,25 @@ def create_mcp_server() -> FastMCP:
         annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True),
         structured_output=True,
     )(search_wca_competitions_handler)
+    server.tool(
+        name="render_competition_results",
+        title="Render competition results",
+        description=(
+            "Render a prepared search_wca_competitions result as responsive "
+            "grouped competition cards. This tool does not refetch data."
+        ),
+        annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=False),
+        meta={
+            "ui": {"resourceUri": WIDGET_RESOURCE_URI},
+            "openai/outputTemplate": WIDGET_RESOURCE_URI,
+        },
+        structured_output=True,
+    )(render_competition_results_handler)
     return server
+
+
+def _competition_results_widget_html() -> str:
+    return WIDGET_HTML_PATH.read_text(encoding="utf-8")
 
 
 def _tool_error(code: str, message: str, **extra: Any) -> ToolError:

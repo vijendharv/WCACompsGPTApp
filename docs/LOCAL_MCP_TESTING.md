@@ -46,7 +46,7 @@ python -m unittest discover -s tests
 Expected result:
 
 ```text
-Ran 9 tests
+Ran 12 tests
 OK
 ```
 
@@ -66,10 +66,10 @@ from wca_comps.mcp_server import create_mcp_server
 async def main():
     server = create_mcp_server()
     tools = await server.list_tools()
-    tool = tools[0]
-    print(tool.name)
-    print(tool.annotations.model_dump())
-    print(sorted(tool.outputSchema["properties"].keys()))
+    for tool in tools:
+        print(tool.name)
+        print(tool.annotations.model_dump() if tool.annotations else None)
+        print(tool.meta)
 
 asyncio.run(main())
 PY
@@ -79,10 +79,13 @@ Expected output should include:
 
 ```text
 search_wca_competitions
-['competitions', 'groups', 'query', 'summary']
+render_competition_results
+ui://widget/competition-results-v1.html
 ```
 
-The annotations should include `readOnlyHint: true` and `openWorldHint: true`.
+The search tool annotations should include `readOnlyHint: true` and
+`openWorldHint: true`. The render tool metadata should include
+`openai/outputTemplate` and `ui.resourceUri` pointing to the widget resource.
 
 ## 5. Run Stdio Mode
 
@@ -126,6 +129,38 @@ The result should contain:
 - `competitions`
 
 This call reaches the live public WCA API.
+
+To test the widget, copy the structured result from `search_wca_competitions`
+and call `render_competition_results` with:
+
+```json
+{
+  "prepared_result": {
+    "query": {
+      "wca_id": "2023VONT01",
+      "person_name": "Saharsh Sai Vontela",
+      "regions": ["Washington"],
+      "from_date": "2026-08-01"
+    },
+    "summary": {
+      "total": 0,
+      "registered": 0,
+      "available": 0,
+      "unavailable": 0
+    },
+    "groups": {
+      "registered": [],
+      "available": [],
+      "unavailable": []
+    },
+    "competitions": []
+  }
+}
+```
+
+For a full visual test, replace the minimal object with the actual search
+result. Inspector should show the registered widget template at
+`ui://widget/competition-results-v1.html` and render grouped competition cards.
 
 ## 7. Run Streamable HTTP Mode
 

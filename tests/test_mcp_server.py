@@ -8,7 +8,12 @@ from unittest.mock import patch
 from mcp.server.fastmcp.exceptions import ToolError
 
 from wca_comps.errors import InputValidationError
-from wca_comps.mcp_server import create_mcp_server, search_wca_competitions_handler
+from wca_comps.mcp_server import (
+    WIDGET_MIME_TYPE,
+    WIDGET_RESOURCE_URI,
+    create_mcp_server,
+    search_wca_competitions_handler,
+)
 
 
 class MCPServerTests(unittest.TestCase):
@@ -17,16 +22,54 @@ class MCPServerTests(unittest.TestCase):
             server = create_mcp_server()
             tools = await server.list_tools()
 
-            self.assertEqual(len(tools), 1)
-            tool = tools[0]
+            self.assertEqual(len(tools), 2)
+            tool = next(tool for tool in tools if tool.name == "search_wca_competitions")
             self.assertEqual(tool.name, "search_wca_competitions")
             self.assertTrue(tool.annotations.readOnlyHint)
             self.assertTrue(tool.annotations.openWorldHint)
+            self.assertIsNone(tool.meta)
             self.assertIn("wca_id", tool.inputSchema["properties"])
             self.assertIn("from_date", tool.inputSchema["properties"])
             self.assertIn("summary", tool.outputSchema["properties"])
             self.assertIn("groups", tool.outputSchema["properties"])
             self.assertIn("competitions", tool.outputSchema["properties"])
+
+        asyncio.run(run())
+
+    def test_render_tool_schema_and_widget_metadata(self) -> None:
+        async def run() -> None:
+            server = create_mcp_server()
+            tools = await server.list_tools()
+
+            tool = next(tool for tool in tools if tool.name == "render_competition_results")
+            self.assertTrue(tool.annotations.readOnlyHint)
+            self.assertFalse(tool.annotations.openWorldHint)
+            self.assertEqual(tool.meta["ui"]["resourceUri"], WIDGET_RESOURCE_URI)
+            self.assertEqual(tool.meta["openai/outputTemplate"], WIDGET_RESOURCE_URI)
+            self.assertIn("prepared_result", tool.inputSchema["properties"])
+            self.assertIn("summary", tool.outputSchema["properties"])
+
+        asyncio.run(run())
+
+    def test_widget_resource_is_registered(self) -> None:
+        async def run() -> None:
+            server = create_mcp_server()
+            resources = await server.list_resources()
+
+            resource = next(
+                resource for resource in resources if str(resource.uri) == WIDGET_RESOURCE_URI
+            )
+            self.assertEqual(resource.mimeType, WIDGET_MIME_TYPE)
+            self.assertTrue(resource.meta["ui"]["prefersBorder"])
+            self.assertEqual(
+                resource.meta["openai/widgetCSP"]["redirect_domains"],
+                ["https://www.worldcubeassociation.org"],
+            )
+
+            contents = await server.read_resource(WIDGET_RESOURCE_URI)
+            self.assertEqual(contents[0].mime_type, WIDGET_MIME_TYPE)
+            self.assertIn("window.openai?.toolOutput", contents[0].content)
+            self.assertIn("Registration open", contents[0].content)
 
         asyncio.run(run())
 
@@ -50,6 +93,21 @@ class MCPServerTests(unittest.TestCase):
             self.assertEqual(
                 structured["competitions"][0]["competition"]["id"], "FakeComp2026"
             )
+            self.assertEqual(json.loads(content[0].text), structured)
+
+        asyncio.run(run())
+
+    def test_render_tool_returns_prepared_result_without_refetching(self) -> None:
+        async def run() -> None:
+            server = create_mcp_server()
+            with patch("wca_comps.mcp_server.search_competitions") as search:
+                content, structured = await server.call_tool(
+                    "render_competition_results",
+                    {"prepared_result": _sample_payload()},
+                )
+
+            search.assert_not_called()
+            self.assertEqual(structured["summary"]["total"], 1)
             self.assertEqual(json.loads(content[0].text), structured)
 
         asyncio.run(run())

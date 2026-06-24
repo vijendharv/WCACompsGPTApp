@@ -80,18 +80,24 @@ tool.
 ## MCP server
 
 The project includes a read-only MCP server using the official Python `mcp`
-SDK. It exposes one tool:
+SDK. It exposes two tools:
 
 | Tool | Purpose |
 | --- | --- |
 | `search_wca_competitions` | Find upcoming WCA competitions in supported regions and assess public registration/eligibility for a WCA ID. |
+| `render_competition_results` | Render a prepared `search_wca_competitions` result as responsive grouped competition cards. |
 
 Tool behavior:
 
-- Inputs: `wca_id` is required; `person_name`, `regions`, and `from_date` are
-  optional.
+- `search_wca_competitions` takes `wca_id`, optional `person_name`, optional
+  `regions`, and optional `from_date`.
 - `from_date` defaults at request time when omitted or `null`.
-- The tool is annotated with `readOnlyHint: true` and `openWorldHint: true`.
+- `search_wca_competitions` is annotated with `readOnlyHint: true` and
+  `openWorldHint: true`.
+- `render_competition_results` takes a prepared structured search result and
+  does not refetch WCA data.
+- `render_competition_results` points to the registered widget resource at
+  `ui://widget/competition-results-v1.html`.
 - Results use a structured output schema with `query`, `summary`, `groups`,
   and `competitions`.
 - Validation, no-result, and upstream failures are returned as typed MCP tool
