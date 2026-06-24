@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WCA competition results</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --text: #18212f;
+      --muted: #667085;
+      --line: #d7dde6;
+      --registered: #16835a;
+      --available: #1d68d8;
+      --unavailable: #7b8494;
+      --chip: #eef2f7;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #11151c;
+        --panel: #171d26;
+        --text: #eef3f8;
+        --muted: #a7b0bf;
+        --line: #303947;
+        --chip: #222b37;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .app {
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      min-width: 0;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 18px;
+      line-height: 1.1;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    button,
+    select {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      min-height: 34px;
+      font: inherit;
+    }
+
+    button {
+      padding: 0 10px;
+      cursor: pointer;
+    }
+
+    button[aria-selected="true"] {
+      border-color: var(--available);
+      outline: 2px solid color-mix(in srgb, var(--available) 20%, transparent);
+    }
+
+    select {
+      padding: 0 28px 0 10px;
+      max-width: 100%;
+    }
+
+    .section {
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 8px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .count {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+      gap: 10px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--unavailable);
+      border-radius: 8px;
+      padding: 12px;
+      min-width: 0;
+    }
+
+    .card.registered {
+      border-left-color: var(--registered);
+    }
+
+    .card.available {
+      border-left-color: var(--available);
+    }
+
+    .card.unavailable {
+      border-left-color: var(--unavailable);
+    }
+
+    .card h3 {
+      margin: 0 0 6px;
+      font-size: 15px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      border-radius: 8px;
+      background: var(--chip);
+      color: var(--muted);
+      padding: 2px 7px;
+      font-size: 12px;
+      line-height: 1.2;
+      max-width: 100%;
+    }
+
+    dl {
+      display: grid;
+      grid-template-columns: max-content minmax(0, 1fr);
+      gap: 4px 10px;
+      margin: 8px 0 0;
+    }
+
+    dt {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    dd {
+      margin: 0;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .link {
+      color: var(--available);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 560px) {
+      .app {
+        padding: 12px;
+      }
+
+      .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .controls {
+        align-items: stretch;
+      }
+
+      .tabs,
+      select {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div id="root" class="empty">No competition data.</div>
+  </main>
+  <script>
+    const state = {
+      activeGroup: "all",
+      region: "all"
+    };
+
+    const GROUPS = [
+      ["registered", "Already registered"],
+      ["available", "Registration open"],
+      ["unavailable", "Unavailable or not yet open"]
+    ];
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function formatDate(start, end) {
+      if (!start) return "";
+      return start === end || !end ? start : `${start} - ${end}`;
+    }
+
+    function capacityText(item) {
+      const count = item.registration?.competitor_count;
+      const limit = item.competition?.competitor_limit;
+      if (count == null && limit == null) return "n/a";
+      if (limit == null) return String(count ?? "n/a");
+      if (count == null) return `Limit ${limit}`;
+      return `${count}/${limit}`;
+    }
+
+    function getAllItems(data) {
+      return GROUPS.flatMap(([key]) => (data.groups?.[key] || []).map((item) => ({
+        ...item,
+        groupKey: key
+      })));
+    }
+
+    function filteredItems(data, groupKey) {
+      return (data.groups?.[groupKey] || []).map((item) => ({
+        ...item,
+        groupKey
+      })).filter((item) => {
+        const matchesRegion = state.region === "all" || item.competition?.region === state.region;
+        return matchesRegion;
+      });
+    }
+
+    function renderCard(item) {
+      const competition = item.competition || {};
+      const eligibility = item.eligibility || {};
+      const events = (competition.event_ids || []).join(", ");
+      const url = competition.url || "#";
+      return `
+        <article class="card ${escapeHtml(item.groupKey)}">
+          <h3>${escapeHtml(competition.name)}</h3>
+          <div class="chips">
+            <span class="chip">${escapeHtml(competition.region)}</span>
+            <span class="chip">${escapeHtml(formatDate(competition.start_date, competition.end_date))}</span>
+          </div>
+          <dl>
+            <dt>Location</dt><dd>${escapeHtml(competition.location)}${competition.venue ? " - " + escapeHtml(competition.venue) : ""}</dd>
+            <dt>Events</dt><dd>${escapeHtml(events || "n/a")}</dd>
+            <dt>Window</dt><dd>${escapeHtml((competition.registration_open || "?").slice(0, 10))} -> ${escapeHtml((competition.registration_close || "?").slice(0, 10))}</dd>
+            <dt>Capacity</dt><dd>${escapeHtml(capacityText(item))}</dd>
+            <dt>Status</dt><dd>${escapeHtml(eligibility.reason || "n/a")}</dd>
+            <dt>WCA</dt><dd><a class="link" href="${escapeHtml(url)}" data-external="${escapeHtml(url)}">Open page</a></dd>
+          </dl>
+        </article>
+      `;
+    }
+
+    function render(data) {
+      const root = document.getElementById("root");
+      if (!data || !data.summary || !data.groups) {
+        root.className = "empty";
+        root.textContent = "No competition data.";
+        return;
+      }
+
+      const allItems = getAllItems(data);
+      const regions = Array.from(new Set(allItems.map((item) => item.competition?.region).filter(Boolean))).sort();
+      const query = data.query || {};
+      const summary = data.summary || {};
+      const regionOptions = ["all", ...regions].map((region) => (
+        `<option value="${escapeHtml(region)}"${state.region === region ? " selected" : ""}>${escapeHtml(region === "all" ? "All regions" : region)}</option>`
+      )).join("");
+      const tabs = [["all", "All"], ...GROUPS].map(([key, label]) => (
+        `<button type="button" role="tab" data-group="${escapeHtml(key)}" aria-selected="${state.activeGroup === key}">${escapeHtml(label)}</button>`
+      )).join("");
+
+      const sections = GROUPS.map(([key, label]) => {
+        const items = filteredItems(data, key);
+        const visible = state.activeGroup === "all" || state.activeGroup === key;
+        return `
+          <section class="section${visible ? "" : " hidden"}">
+            <h2 class="section-title">${escapeHtml(label)} <span class="count">${items.length}</span></h2>
+            ${items.length ? `<div class="cards">${items.map(renderCard).join("")}</div>` : `<div class="empty">None</div>`}
+          </section>
+        `;
+      }).join("");
+
+      root.className = "";
+      root.innerHTML = `
+        <div class="topbar">
+          <div>
+            <h1>WCA competitions</h1>
+            <div class="subtitle">${escapeHtml(query.person_name || query.wca_id || "Competitor")} - from ${escapeHtml(query.from_date || "")}</div>
+          </div>
+        </div>
+        <div class="summary">
+          <div class="metric"><strong>${summary.total ?? 0}</strong><span>Total</span></div>
+          <div class="metric"><strong>${summary.registered ?? 0}</strong><span>Registered</span></div>
+          <div class="metric"><strong>${summary.available ?? 0}</strong><span>Open</span></div>
+          <div class="metric"><strong>${summary.unavailable ?? 0}</strong><span>Unavailable</span></div>
+        </div>
+        <div class="controls">
+          <div class="tabs" role="tablist">${tabs}</div>
+          <select aria-label="Region filter">${regionOptions}</select>
+        </div>
+        ${sections}
+      `;
+
+      root.querySelectorAll("[data-group]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.activeGroup = button.dataset.group || "all";
+          render(data);
+        });
+      });
+      root.querySelector("select")?.addEventListener("change", (event) => {
+        state.region = event.target.value;
+        render(data);
+      });
+      root.querySelectorAll("[data-external]").forEach((link) => {
+        link.addEventListener("click", (event) => {
+          const href = link.dataset.external;
+          if (window.openai?.openExternal && href) {
+            event.preventDefault();
+            window.openai.openExternal({ href, redirectUrl: false });
+          }
+        });
+      });
+      window.openai?.notifyIntrinsicHeight?.();
+    }
+
+    function currentOutput() {
+      return window.openai?.toolOutput || window.__WCA_COMPS_SAMPLE__ || null;
+    }
+
+    render(currentOutput());
+    window.addEventListener("message", () => render(currentOutput()));
+  </script>
+</body>
+</html>
