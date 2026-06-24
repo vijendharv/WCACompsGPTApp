@@ -56,7 +56,7 @@ You can also run the compile check:
 python -m compileall wca_comps tests
 ```
 
-## 4. Smoke-Test MCP Tool Registration
+## 4. Smoke-Test MCP Registration
 
 ```bash
 python - <<'PY'
@@ -65,11 +65,21 @@ from wca_comps.mcp_server import create_mcp_server
 
 async def main():
     server = create_mcp_server()
+
+    print("Tools:")
     tools = await server.list_tools()
     for tool in tools:
         print(tool.name)
         print(tool.annotations.model_dump() if tool.annotations else None)
         print(tool.meta)
+
+    print("Resources:")
+    resources = await server.list_resources()
+    for resource in resources:
+        print(resource.name)
+        print(resource.uri)
+        print(resource.mimeType)
+        print(resource.meta)
 
 asyncio.run(main())
 PY
@@ -80,12 +90,16 @@ Expected output should include:
 ```text
 search_wca_competitions
 render_competition_results
+competition_results_widget
 ui://widget/competition-results-v1.html
+text/html;profile=mcp-app
 ```
 
 The search tool annotations should include `readOnlyHint: true` and
 `openWorldHint: true`. The render tool metadata should include
 `openai/outputTemplate` and `ui.resourceUri` pointing to the widget resource.
+The resource should use the `text/html;profile=mcp-app` MIME type and include
+widget metadata/CSP.
 
 ## 5. Run Stdio Mode
 
@@ -97,6 +111,11 @@ python -m wca_comps.mcp_server
 
 This command appears to hang because the server is waiting for MCP JSON-RPC
 messages over stdio. That is normal.
+
+If you run MCP Inspector with the command in the next section, you do not need
+to start this stdio process separately. Inspector launches the stdio server for
+you. If you did start it manually, stop it with `Ctrl-C` before starting a
+different server mode.
 
 ## 6. Test With MCP Inspector
 
@@ -110,7 +129,8 @@ Open the local URL printed by Inspector, then:
 
 1. Go to the tools view.
 2. Select `search_wca_competitions`.
-3. Use this sample payload:
+3. Switch the input editor to JSON if Inspector is showing form fields.
+4. Use this sample payload:
 
 ```json
 {
@@ -129,6 +149,14 @@ The result should contain:
 - `competitions`
 
 This call reaches the live public WCA API.
+
+To inspect the registered widget resource:
+
+1. Go to the resources view.
+2. Select `competition_results_widget`.
+3. Confirm the response includes `ui://widget/competition-results-v1.html`.
+4. Confirm the MIME type is `text/html;profile=mcp-app`.
+5. Confirm the returned text starts with HTML for the widget template.
 
 To test the widget, copy the structured result from `search_wca_competitions`
 and call `render_competition_results` with:
@@ -160,7 +188,9 @@ and call `render_competition_results` with:
 
 For a full visual test, replace the minimal object with the actual search
 result. Inspector should show the registered widget template at
-`ui://widget/competition-results-v1.html` and render grouped competition cards.
+`ui://widget/competition-results-v1.html`. Depending on the Inspector version,
+it may show the resource and tool metadata without rendering the same iframe
+preview that ChatGPT Developer Mode renders.
 
 ## 7. Run Streamable HTTP Mode
 
@@ -177,6 +207,11 @@ http://127.0.0.1:8000/mcp
 ```
 
 In MCP Inspector, choose Streamable HTTP and use that URL.
+
+Do not run the stdio server and Streamable HTTP server as the same process.
+Stop the stdio process and its Inspector session before switching to Streamable
+HTTP. Start a new Inspector session only if you want to inspect the HTTP
+endpoint.
 
 ## 8. CLI Sanity Check
 
