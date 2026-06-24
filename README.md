@@ -24,7 +24,7 @@ The code is decomposed into small, single-responsibility modules:
 | `wca_comps/validation.py`    | Runtime validation for WCA IDs, dates, and supported regions.   |
 | `wca_comps/serializers.py`   | Stable JSON-ready result schemas for app/MCP consumers.         |
 | `wca_comps/search.py`        | Validated structured search workflow for MCP tools.             |
-| `wca_comps/mcp_server.py`    | Read-only MCP server exposing `search_wca_competitions`.        |
+| `wca_comps/mcp_server.py`    | Read-only MCP server exposing search/render tools and widget resource. |
 | `wca_comps/errors.py`        | Typed application errors for validation, no results, upstreams. |
 | `wca_comps/competitions.py`  | Fetch upcoming competitions and filter them by region.          |
 | `wca_comps/registrations.py` | Check a person's registration via the public WCIF endpoint.     |
@@ -75,17 +75,26 @@ payload = search_competitions(
 ```
 
 The returned payload is JSON-ready and backs the `search_wca_competitions` MCP
-tool.
+tool. If no matching competitions are found, the structured search path raises
+a typed no-results error instead of returning an empty successful payload.
 
 ## MCP server
 
 The project includes a read-only MCP server using the official Python `mcp`
-SDK. It exposes two tools:
+SDK. It currently implements the read-only MVP pieces from milestones 2 and 3:
+one data-search tool, one widget-render tool, and one registered ChatGPT Apps
+widget resource.
 
 | Tool | Purpose |
 | --- | --- |
 | `search_wca_competitions` | Find upcoming WCA competitions in supported regions and assess public registration/eligibility for a WCA ID. |
 | `render_competition_results` | Render a prepared `search_wca_competitions` result as responsive grouped competition cards. |
+
+Registered resource:
+
+| Resource | MIME type | Purpose |
+| --- | --- | --- |
+| `ui://widget/competition-results-v1.html` | `text/html;profile=mcp-app` | ChatGPT Apps widget template that renders grouped competition result cards from `render_competition_results`. |
 
 Tool behavior:
 
@@ -97,7 +106,11 @@ Tool behavior:
 - `render_competition_results` takes a prepared structured search result and
   does not refetch WCA data.
 - `render_competition_results` points to the registered widget resource at
-  `ui://widget/competition-results-v1.html`.
+  `ui://widget/competition-results-v1.html` through both `ui.resourceUri` and
+  `openai/outputTemplate`.
+- The widget resource advertises Apps SDK metadata, a border preference, a CSP,
+  and allowed redirects to `https://www.worldcubeassociation.org` for official
+  competition links.
 - Results use a structured output schema with `query`, `summary`, `groups`,
   and `competitions`.
 - Validation, no-result, and upstream failures are returned as typed MCP tool
@@ -121,6 +134,28 @@ tests or custom hosting.
 For step-by-step local testing, see
 [`docs/LOCAL_MCP_TESTING.md`](docs/LOCAL_MCP_TESTING.md).
 
+> MCP Inspector can show the registered resource and tool metadata, including
+> the widget URI, but depending on the Inspector version it may not render the
+> ChatGPT iframe preview exactly like ChatGPT Developer Mode.
+
+## ChatGPT widget
+
+The widget HTML lives at
+[`public/competition-results-widget.html`](public/competition-results-widget.html)
+and is served by the MCP resource above.
+
+Current widget behavior:
+
+- Reads structured output from `window.openai.toolOutput` when rendered by
+  ChatGPT, with a small local fallback sample for standalone development.
+- Shows grouped competition cards for registered, available, and unavailable
+  competitions.
+- Includes category tabs and a region filter.
+- Displays dates, venue/location, events, registration windows, competitor
+  counts, capacity, and eligibility reasons.
+- Opens official WCA competition links through the Apps SDK bridge when
+  available.
+
 ## Setup
 
 ```bash
@@ -132,6 +167,10 @@ pip install -r requirements.txt
 > `truststore` is included so verification works behind corporate
 > TLS-intercepting proxies by using the OS trust store. It is optional — the
 > client falls back to `certifi` if it is unavailable.
+
+If the repository is moved or `.venv/bin/pip` points at another checkout,
+repair or recreate the virtualenv from the repo root. See
+[`RECREATE_VENV.md`](RECREATE_VENV.md) for the full steps.
 
 ## Usage
 
@@ -168,7 +207,26 @@ python -m compileall wca_comps tests
 
 The tests cover input validation, runtime date defaults, supported region
 selection, short-lived caching, concurrent WCIF lookup, structured grouping
-behavior, and the MCP tool schema/annotations/error handling.
+behavior, MCP tool schemas/annotations/error handling, widget resource
+registration, and render-tool behavior.
+
+## Milestone status
+
+Completed:
+
+- Milestone 1: structured application core, validation, concurrency, caching,
+  serializers, and tests.
+- Milestone 2: read-only MCP server with `search_wca_competitions`, typed
+  errors, schemas, and annotations.
+- Milestone 3: ChatGPT widget resource and `render_competition_results` tool.
+
+Not yet implemented:
+
+- Milestone 4: production Dockerfile, health endpoint, private deployment, and
+  ChatGPT Developer Mode connection to a public HTTPS `/mcp` endpoint.
+- Milestone 5: confirmed email action exposed as an MCP tool.
+- Milestone 6: public release assets, policy/support URLs, acceptance tests,
+  and submission flow.
 
 ## Emailing the report
 
