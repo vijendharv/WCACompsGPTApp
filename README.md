@@ -210,6 +210,11 @@ selection, short-lived caching, concurrent WCIF lookup, structured grouping
 behavior, MCP tool schemas/annotations/error handling, widget resource
 registration, and render-tool behavior.
 
+## Pull request review
+
+Pull requests run the `Code Review` GitHub Actions workflow when opened or
+updated. The workflow requires the repository secret `ANTHROPIC_API_KEY`.
+
 ## Milestone status
 
 Completed:
