@@ -46,7 +46,7 @@ python -m unittest discover -s tests
 Expected result:
 
 ```text
-Ran 12 tests
+Ran 14 tests
 OK
 ```
 
@@ -208,12 +208,61 @@ http://127.0.0.1:8000/mcp
 
 In MCP Inspector, choose Streamable HTTP and use that URL.
 
+The health endpoint is available only in HTTP mode. From another terminal:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+Expected response:
+
+```json
+{"status":"ok"}
+```
+
 Do not run the stdio server and Streamable HTTP server as the same process.
 Stop the stdio process and its Inspector session before switching to Streamable
 HTTP. Start a new Inspector session only if you want to inspect the HTTP
 endpoint.
 
-## 8. CLI Sanity Check
+## 8. Test The Production Container
+
+Docker must be installed and running. From the repository root, build the
+image:
+
+```bash
+docker build -t wca-comps-mcp .
+```
+
+Start the container:
+
+```bash
+docker run --rm --name wca-comps-mcp -p 8000:8000 wca-comps-mcp
+```
+
+The image already sets `MCP_TRANSPORT=streamable-http`, `HOST=0.0.0.0`, and
+`PORT=8000`. From another terminal, verify the health endpoint:
+
+```bash
+curl -i http://127.0.0.1:8000/health
+```
+
+Then connect MCP Inspector to:
+
+```text
+http://127.0.0.1:8000/mcp
+```
+
+To inspect Docker's own health status while the named container is running:
+
+```bash
+docker inspect --format '{{json .State.Health}}' wca-comps-mcp
+```
+
+Stop the attached container with `Ctrl-C`. The `--rm` option removes it after
+it stops.
+
+## 9. CLI Sanity Check
 
 The CLI path is separate from MCP, but it is useful for confirming the core WCA
 logic still works:
@@ -234,3 +283,6 @@ This prints the normal report and does not email unless `--email-to` is passed.
   searches.
 - **Unexpected `.venv` path:** check `.venv/bin/pip --version` and repair the
   virtualenv with the commands in step 2.
+- **Docker port already allocated:** stop the existing process on port 8000 or
+  run the container with matching alternate ports, such as
+  `docker run --rm -e PORT=8080 -p 8080:8080 wca-comps-mcp`.

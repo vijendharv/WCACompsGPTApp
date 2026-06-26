@@ -11,6 +11,8 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from .errors import InputValidationError, NoResultsError, UpstreamServiceError
 from .search import search_competitions
@@ -176,6 +178,12 @@ def create_mcp_server() -> FastMCP:
         streamable_http_path="/mcp",
         stateless_http=True,
     )
+    server.custom_route(
+        "/health",
+        methods=["GET"],
+        name="health",
+        include_in_schema=False,
+    )(health_check_handler)
     server.resource(
         WIDGET_RESOURCE_URI,
         name="competition_results_widget",
@@ -227,6 +235,11 @@ def create_mcp_server() -> FastMCP:
         structured_output=True,
     )(render_competition_results_handler)
     return server
+
+
+async def health_check_handler(_request: Request) -> JSONResponse:
+    """Report process health without calling upstream services."""
+    return JSONResponse({"status": "ok"})
 
 
 def _competition_results_widget_html() -> str:

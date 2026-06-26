@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import unittest
 from unittest.mock import patch
 
+import httpx
 from mcp.server.fastmcp.exceptions import ToolError
 
 from wca_comps.errors import InputValidationError
@@ -17,6 +19,32 @@ from wca_comps.mcp_server import (
 
 
 class MCPServerTests(unittest.TestCase):
+    def test_health_endpoint_reports_process_health(self) -> None:
+        async def run() -> None:
+            app = create_mcp_server().streamable_http_app()
+            transport = httpx.ASGITransport(app=app)
+
+            async with httpx.AsyncClient(
+                transport=transport,
+                base_url="http://testserver",
+            ) as client:
+                response = await client.get("/health")
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json(), {"status": "ok"})
+
+        asyncio.run(run())
+
+    def test_server_uses_configured_host_and_port(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"HOST": "0.0.0.0", "PORT": "9000"},
+        ):
+            server = create_mcp_server()
+
+        self.assertEqual(server.settings.host, "0.0.0.0")
+        self.assertEqual(server.settings.port, 9000)
+
     def test_search_tool_schema_and_annotations(self) -> None:
         async def run() -> None:
             server = create_mcp_server()
