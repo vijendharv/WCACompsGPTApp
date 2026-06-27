@@ -125,8 +125,12 @@ python -m wca_comps.mcp_server
 Run the Streamable HTTP endpoint at `/mcp`:
 
 ```bash
-MCP_TRANSPORT=streamable-http PORT=8000 python -m wca_comps.mcp_server
+MCP_TRANSPORT=streamable-http HOST=127.0.0.1 PORT=8000 python -m wca_comps.mcp_server
 ```
+
+In HTTP mode, `GET /health` returns `{"status":"ok"}` without contacting the
+WCA API. Hosted environments must set `HOST=0.0.0.0`; local clients can still
+connect through `localhost` or `127.0.0.1`.
 
 The module also exports `app` for ASGI servers and `create_mcp_server()` for
 tests or custom hosting.
@@ -172,6 +176,34 @@ If the repository is moved or `.venv/bin/pip` points at another checkout,
 repair or recreate the virtualenv from the repo root. See
 [`RECREATE_VENV.md`](RECREATE_VENV.md) for the full steps.
 
+## Docker
+
+Build the production image from the repository root:
+
+```bash
+docker build -t wca-comps-mcp .
+```
+
+Run it locally:
+
+```bash
+docker run --rm --name wca-comps-mcp -p 8000:8000 wca-comps-mcp
+```
+
+The container defaults to Streamable HTTP on `0.0.0.0:8000`. Verify it from
+another terminal:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+Use `http://127.0.0.1:8000/mcp` as the Streamable HTTP URL in MCP Inspector.
+The image runs as a non-root user and reads `MCP_TRANSPORT`, `HOST`, and `PORT`
+from the environment, so a hosting provider can override them.
+
+For the Koyeb service configuration and ChatGPT connection flow, see
+[`docs/KOYEB_DEPLOYMENT.md`](docs/KOYEB_DEPLOYMENT.md).
+
 ## Usage
 
 ```bash
@@ -208,7 +240,8 @@ python -m compileall wca_comps tests
 The tests cover input validation, runtime date defaults, supported region
 selection, short-lived caching, concurrent WCIF lookup, structured grouping
 behavior, MCP tool schemas/annotations/error handling, widget resource
-registration, and render-tool behavior.
+registration, render-tool behavior, hosted address configuration, and the
+health endpoint.
 
 ## Pull request review
 
@@ -229,10 +262,15 @@ Completed:
   errors, schemas, and annotations.
 - Milestone 3: ChatGPT widget resource and `render_competition_results` tool.
 
+In progress:
+
+- Milestone 4: the production Dockerfile, non-root container process, and
+  lightweight health endpoint are implemented. Koyeb deployment, public HTTPS
+  verification, ChatGPT Developer Mode connection, and cold-start measurements
+  remain.
+
 Not yet implemented:
 
-- Milestone 4: production Dockerfile, health endpoint, private deployment, and
-  ChatGPT Developer Mode connection to a public HTTPS `/mcp` endpoint.
 - Milestone 5: confirmed email action exposed as an MCP tool.
 - Milestone 6: public release assets, policy/support URLs, acceptance tests,
   and submission flow.
