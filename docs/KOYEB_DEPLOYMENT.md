@@ -26,8 +26,25 @@ The response should have status `200` and contain:
 ```
 
 Connect MCP Inspector to `http://127.0.0.1:8000/mcp` and confirm that both
-tools and the widget resource are available. Stop the container with `Ctrl-C`
-when finished.
+tools and the widget resource are available.
+
+When finished, press `Ctrl-C` in the terminal running the container. The
+`--rm` option removes it automatically. If it is running in another terminal,
+use:
+
+```bash
+docker stop wca-comps-mcp
+```
+
+To reset the local image before another clean test:
+
+```bash
+docker rm -f wca-comps-mcp 2>/dev/null || true
+docker image rm wca-comps-mcp 2>/dev/null || true
+docker build --no-cache -t wca-comps-mcp .
+```
+
+Continue to Koyeb only after the rebuilt image passes the health and MCP checks.
 
 ## 2. Create A Koyeb Account
 

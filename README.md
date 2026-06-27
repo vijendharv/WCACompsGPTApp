@@ -201,6 +201,21 @@ Use `http://127.0.0.1:8000/mcp` as the Streamable HTTP URL in MCP Inspector.
 The image runs as a non-root user and reads `MCP_TRANSPORT`, `HOST`, and `PORT`
 from the environment, so a hosting provider can override them.
 
+When testing is complete, press `Ctrl-C` in the terminal running the container.
+Because the command uses `--rm`, Docker removes the stopped container
+automatically. If it is running in another terminal, use:
+
+```bash
+docker stop wca-comps-mcp
+```
+
+To remove the local image and rebuild everything without cached layers:
+
+```bash
+docker image rm wca-comps-mcp
+docker build --no-cache -t wca-comps-mcp .
+```
+
 For the Koyeb service configuration and ChatGPT connection flow, see
 [`docs/KOYEB_DEPLOYMENT.md`](docs/KOYEB_DEPLOYMENT.md).
 

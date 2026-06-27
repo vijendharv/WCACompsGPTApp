@@ -259,8 +259,35 @@ To inspect Docker's own health status while the named container is running:
 docker inspect --format '{{json .State.Health}}' wca-comps-mcp
 ```
 
-Stop the attached container with `Ctrl-C`. The `--rm` option removes it after
-it stops.
+### Stop And Reset Docker
+
+If the container is attached to the current terminal, stop it with `Ctrl-C`.
+The `--rm` option removes the container after it stops.
+
+If the container is running from another terminal, stop it by name:
+
+```bash
+docker stop wca-comps-mcp
+```
+
+Confirm that no matching container remains:
+
+```bash
+docker ps -a --filter name=wca-comps-mcp
+```
+
+For a complete local reset, remove any leftover container and the image, then
+rebuild without cached layers:
+
+```bash
+docker rm -f wca-comps-mcp 2>/dev/null || true
+docker image rm wca-comps-mcp 2>/dev/null || true
+docker build --no-cache -t wca-comps-mcp .
+docker run --rm --name wca-comps-mcp -p 8000:8000 wca-comps-mcp
+```
+
+The forced removal commands tolerate the normal case where the container or
+image was already removed.
 
 ## 9. CLI Sanity Check
 
