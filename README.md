@@ -246,8 +246,11 @@ health endpoint.
 ## Pull request review
 
 Pull requests run the `Code Review` GitHub Actions workflow when opened or
-updated. The workflow requires the repository secret `ANTHROPIC_API_KEY` and
-is expected to post review feedback on the pull request.
+updated. The workflow requires the repository secret `ANTHROPIC_API_KEY`,
+reviews only the pull request changes with a single Haiku agent, and posts one
+concise result comment. See
+[`docs/CLAUDE_CODE_REVIEW.md`](docs/CLAUDE_CODE_REVIEW.md) for the workflow,
+cost controls, troubleshooting, and lessons learned.
 
 ## Milestone status
 
