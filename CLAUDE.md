@@ -2,6 +2,19 @@
 
 Use this as the review checklist for the WCA Competition Finder repository.
 
+## Review Scope And Efficiency
+
+- Start with the pull request diff and review only changed behavior.
+- Read surrounding code only when needed to validate a concrete concern.
+- Apply only the guideline sections relevant to the changed files; do not scan
+  unrelated modules for pre-existing issues.
+- Do not run builds, tests, or broad repository searches during an automated
+  code review. CI and the PR validation summary provide that signal.
+- Avoid duplicate tool calls and repeated analysis of the same concern.
+- Report only actionable, high-confidence bugs, regressions, security issues,
+  or explicit violations of this file.
+- If no qualifying issues remain, report that result and stop.
+
 ## Architecture
 
 Keep the current boundaries clear:
