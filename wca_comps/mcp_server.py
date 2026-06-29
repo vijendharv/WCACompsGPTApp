@@ -20,6 +20,7 @@ from .search import search_competitions
 SERVER_NAME = "WCA Competition Finder"
 WIDGET_RESOURCE_URI = "ui://widget/competition-results-v1.html"
 WIDGET_MIME_TYPE = "text/html;profile=mcp-app"
+WIDGET_DOMAIN = "https://afraid-livia-vijay-org-24e91b62.koyeb.app"
 WIDGET_HTML_PATH = Path(__file__).resolve().parent.parent / "public" / "competition-results-widget.html"
 SERVER_INSTRUCTIONS = (
     "Use this server to find upcoming World Cube Association competitions, "
@@ -192,6 +193,7 @@ def create_mcp_server() -> FastMCP:
         mime_type=WIDGET_MIME_TYPE,
         meta={
             "ui": {
+                "domain": WIDGET_DOMAIN,
                 "prefersBorder": True,
                 "csp": {
                     "connectDomains": [],

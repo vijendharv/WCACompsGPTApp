@@ -11,6 +11,7 @@ from mcp.server.fastmcp.exceptions import ToolError
 
 from wca_comps.errors import InputValidationError
 from wca_comps.mcp_server import (
+    WIDGET_DOMAIN,
     WIDGET_MIME_TYPE,
     WIDGET_RESOURCE_URI,
     create_mcp_server,
@@ -88,6 +89,7 @@ class MCPServerTests(unittest.TestCase):
                 resource for resource in resources if str(resource.uri) == WIDGET_RESOURCE_URI
             )
             self.assertEqual(resource.mimeType, WIDGET_MIME_TYPE)
+            self.assertEqual(resource.meta["ui"]["domain"], WIDGET_DOMAIN)
             self.assertTrue(resource.meta["ui"]["prefersBorder"])
             self.assertEqual(
                 resource.meta["openai/widgetCSP"]["redirect_domains"],
@@ -97,6 +99,7 @@ class MCPServerTests(unittest.TestCase):
             contents = await server.read_resource(WIDGET_RESOURCE_URI)
             self.assertEqual(contents[0].mime_type, WIDGET_MIME_TYPE)
             self.assertIn("window.openai?.toolOutput", contents[0].content)
+            self.assertIn('"openai:set_globals"', contents[0].content)
             self.assertIn("Registration open", contents[0].content)
 
         asyncio.run(run())
