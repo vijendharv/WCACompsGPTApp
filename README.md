@@ -113,8 +113,9 @@ Tool behavior:
 - `render_competition_results` points to the registered widget resource at
   `ui://widget/competition-results-v1.html` through both `ui.resourceUri` and
   `openai/outputTemplate`.
-- The widget resource advertises Apps SDK metadata, its dedicated Koyeb domain,
-  a border preference, a CSP, and allowed redirects to
+- The widget resource advertises Apps SDK metadata, a deployment-specific
+  domain from `WIDGET_DOMAIN` when configured, a border preference, a CSP, and
+  allowed redirects to
   `https://www.worldcubeassociation.org` for official competition links.
 - Results use a structured output schema with `query`, `summary`, `groups`,
   and `competitions`.
