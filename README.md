@@ -162,6 +162,8 @@ Current widget behavior:
   ChatGPT, listens for `openai:set_globals` updates when output arrives after
   iframe initialization, and uses a small local fallback sample for standalone
   development.
+- Advertises the widget as the complete user-facing result so ChatGPT avoids
+  repeating the same competition table unless the user requests text.
 - Shows grouped competition cards for registered, available, and unavailable
   competitions.
 - Includes category tabs and a region filter.
