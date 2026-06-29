@@ -81,13 +81,16 @@ class MCPServerTests(unittest.TestCase):
 
     def test_widget_resource_is_registered(self) -> None:
         async def run() -> None:
-            server = create_mcp_server()
+            widget_domain = "https://wca-competition-finder.example.com"
+            with patch.dict(os.environ, {"WIDGET_DOMAIN": widget_domain}):
+                server = create_mcp_server()
             resources = await server.list_resources()
 
             resource = next(
                 resource for resource in resources if str(resource.uri) == WIDGET_RESOURCE_URI
             )
             self.assertEqual(resource.mimeType, WIDGET_MIME_TYPE)
+            self.assertEqual(resource.meta["ui"]["domain"], widget_domain)
             self.assertTrue(resource.meta["ui"]["prefersBorder"])
             self.assertEqual(
                 resource.meta["openai/widgetCSP"]["redirect_domains"],
@@ -97,7 +100,22 @@ class MCPServerTests(unittest.TestCase):
             contents = await server.read_resource(WIDGET_RESOURCE_URI)
             self.assertEqual(contents[0].mime_type, WIDGET_MIME_TYPE)
             self.assertIn("window.openai?.toolOutput", contents[0].content)
+            self.assertIn('"openai:set_globals"', contents[0].content)
             self.assertIn("Registration open", contents[0].content)
+
+        asyncio.run(run())
+
+    def test_widget_domain_is_omitted_when_unconfigured(self) -> None:
+        async def run() -> None:
+            with patch.dict(os.environ):
+                os.environ.pop("WIDGET_DOMAIN", None)
+                server = create_mcp_server()
+            resources = await server.list_resources()
+            resource = next(
+                resource for resource in resources if str(resource.uri) == WIDGET_RESOURCE_URI
+            )
+
+            self.assertNotIn("domain", resource.meta["ui"])
 
         asyncio.run(run())
 

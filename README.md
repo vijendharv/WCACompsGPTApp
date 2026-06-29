@@ -5,6 +5,11 @@ competitions in **Washington**, **Oregon**, and **British Columbia** and checks
 whether a given competitor (default: *Saharsh Sai Vontela*, WCA ID `2023VONT01`)
 is registered for them.
 
+The canonical ChatGPT app icon is stored at
+[`assets/wca-competition-finder-icon.png`](assets/wca-competition-finder-icon.png).
+Use this version for app configuration and submission so the branding remains
+consistent across environments.
+
 It uses the public WCA API:
 
 - `GET /api/v0/competitions` — upcoming competitions (filtered by country, then
@@ -108,9 +113,10 @@ Tool behavior:
 - `render_competition_results` points to the registered widget resource at
   `ui://widget/competition-results-v1.html` through both `ui.resourceUri` and
   `openai/outputTemplate`.
-- The widget resource advertises Apps SDK metadata, a border preference, a CSP,
-  and allowed redirects to `https://www.worldcubeassociation.org` for official
-  competition links.
+- The widget resource advertises Apps SDK metadata, a deployment-specific
+  domain from `WIDGET_DOMAIN` when configured, a border preference, a CSP, and
+  allowed redirects to
+  `https://www.worldcubeassociation.org` for official competition links.
 - Results use a structured output schema with `query`, `summary`, `groups`,
   and `competitions`.
 - Validation, no-result, and upstream failures are returned as typed MCP tool
@@ -137,6 +143,8 @@ tests or custom hosting.
 
 For step-by-step local testing, see
 [`docs/LOCAL_MCP_TESTING.md`](docs/LOCAL_MCP_TESTING.md).
+For ChatGPT conversation and widget test cases, see
+[`docs/GPT_APP_TEST_PROMPTS.md`](docs/GPT_APP_TEST_PROMPTS.md).
 
 > MCP Inspector can show the registered resource and tool metadata, including
 > the widget URI, but depending on the Inspector version it may not render the
@@ -151,7 +159,9 @@ and is served by the MCP resource above.
 Current widget behavior:
 
 - Reads structured output from `window.openai.toolOutput` when rendered by
-  ChatGPT, with a small local fallback sample for standalone development.
+  ChatGPT, listens for `openai:set_globals` updates when output arrives after
+  iframe initialization, and uses a small local fallback sample for standalone
+  development.
 - Shows grouped competition cards for registered, available, and unavailable
   competitions.
 - Includes category tabs and a region filter.

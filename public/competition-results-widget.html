@@ -421,7 +421,9 @@
     }
 
     render(currentOutput());
-    window.addEventListener("message", () => render(currentOutput()));
+    window.addEventListener("openai:set_globals", (event) => {
+      render(event.detail?.globals?.toolOutput ?? currentOutput());
+    }, { passive: true });
   </script>
 </body>
 </html>

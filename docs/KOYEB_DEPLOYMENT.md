@@ -79,7 +79,12 @@ Add these environment variables:
 MCP_TRANSPORT=streamable-http
 HOST=0.0.0.0
 PORT=8000
+WIDGET_DOMAIN=https://YOUR-SERVICE-DOMAIN
 ```
+
+Set `WIDGET_DOMAIN` to the public HTTPS origin assigned to this Koyeb service,
+without a trailing path. The widget domain is deployment-specific and required
+for ChatGPT app submission.
 
 Configure a custom health check:
 

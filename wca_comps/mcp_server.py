@@ -168,6 +168,34 @@ def render_competition_results_handler(
     return prepared_result
 
 
+def _widget_resource_meta() -> dict[str, Any]:
+    """Build widget metadata from portable defaults and deployment settings."""
+    ui: dict[str, Any] = {
+        "prefersBorder": True,
+        "csp": {
+            "connectDomains": [],
+            "resourceDomains": [],
+        },
+    }
+    widget_domain = os.environ.get("WIDGET_DOMAIN", "").strip()
+    if widget_domain:
+        ui["domain"] = widget_domain
+
+    return {
+        "ui": ui,
+        "openai/widgetDescription": (
+            "Grouped WCA competition cards with registration status, "
+            "capacity, region filtering, and official WCA links."
+        ),
+        "openai/widgetPrefersBorder": True,
+        "openai/widgetCSP": {
+            "connect_domains": [],
+            "resource_domains": [],
+            "redirect_domains": ["https://www.worldcubeassociation.org"],
+        },
+    }
+
+
 def create_mcp_server() -> FastMCP:
     """Create and configure the WCA Comps MCP server."""
     server = FastMCP(
@@ -190,25 +218,7 @@ def create_mcp_server() -> FastMCP:
         title="Competition results widget",
         description="Responsive grouped WCA competition cards.",
         mime_type=WIDGET_MIME_TYPE,
-        meta={
-            "ui": {
-                "prefersBorder": True,
-                "csp": {
-                    "connectDomains": [],
-                    "resourceDomains": [],
-                },
-            },
-            "openai/widgetDescription": (
-                "Grouped WCA competition cards with registration status, "
-                "capacity, region filtering, and official WCA links."
-            ),
-            "openai/widgetPrefersBorder": True,
-            "openai/widgetCSP": {
-                "connect_domains": [],
-                "resource_domains": [],
-                "redirect_domains": ["https://www.worldcubeassociation.org"],
-            },
-        },
+        meta=_widget_resource_meta(),
     )(_competition_results_widget_html)
     server.tool(
         name="search_wca_competitions",
