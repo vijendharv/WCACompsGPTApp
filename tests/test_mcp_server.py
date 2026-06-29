@@ -74,6 +74,7 @@ class MCPServerTests(unittest.TestCase):
             self.assertFalse(tool.annotations.openWorldHint)
             self.assertEqual(tool.meta["ui"]["resourceUri"], WIDGET_RESOURCE_URI)
             self.assertEqual(tool.meta["openai/outputTemplate"], WIDGET_RESOURCE_URI)
+            self.assertIn("complete response", tool.description)
             self.assertIn("prepared_result", tool.inputSchema["properties"])
             self.assertIn("summary", tool.outputSchema["properties"])
 
@@ -92,6 +93,10 @@ class MCPServerTests(unittest.TestCase):
             self.assertEqual(resource.mimeType, WIDGET_MIME_TYPE)
             self.assertEqual(resource.meta["ui"]["domain"], widget_domain)
             self.assertTrue(resource.meta["ui"]["prefersBorder"])
+            self.assertIn(
+                "no duplicate assistant table",
+                resource.meta["openai/widgetDescription"],
+            )
             self.assertEqual(
                 resource.meta["openai/widgetCSP"]["redirect_domains"],
                 ["https://www.worldcubeassociation.org"],

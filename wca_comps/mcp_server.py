@@ -24,7 +24,10 @@ WIDGET_HTML_PATH = Path(__file__).resolve().parent.parent / "public" / "competit
 SERVER_INSTRUCTIONS = (
     "Use this server to find upcoming World Cube Association competitions, "
     "check public registration status for a WCA ID, and explain registration "
-    "eligibility. The search tool is read-only and uses public WCA API data."
+    "eligibility. The search tool is read-only and uses public WCA API data. "
+    "After render_competition_results returns, treat its widget as the complete "
+    "user-facing result. Do not repeat its competition rows, summary, or table "
+    "unless the user explicitly asks for a text version."
 )
 
 
@@ -184,8 +187,10 @@ def _widget_resource_meta() -> dict[str, Any]:
     return {
         "ui": ui,
         "openai/widgetDescription": (
-            "Grouped WCA competition cards with registration status, "
-            "capacity, region filtering, and official WCA links."
+            "Complete interactive WCA competition results, including grouped "
+            "registration status, capacity, region filtering, and official WCA "
+            "links. The widget already presents the full result, so no duplicate "
+            "assistant table or summary is needed."
         ),
         "openai/widgetPrefersBorder": True,
         "openai/widgetCSP": {
@@ -235,7 +240,8 @@ def create_mcp_server() -> FastMCP:
         title="Render competition results",
         description=(
             "Render a prepared search_wca_competitions result as responsive "
-            "grouped competition cards. This tool does not refetch data."
+            "grouped competition cards. This tool does not refetch data. Treat "
+            "the widget as the complete response unless the user asks for text."
         ),
         annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=False),
         meta={
