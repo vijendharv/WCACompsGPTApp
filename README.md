@@ -5,6 +5,11 @@ competitions in **Washington**, **Oregon**, and **British Columbia** and checks
 whether a given competitor (default: *Saharsh Sai Vontela*, WCA ID `2023VONT01`)
 is registered for them.
 
+The canonical ChatGPT app icon is stored at
+[`assets/wca-competition-finder-icon.png`](assets/wca-competition-finder-icon.png).
+Use this version for app configuration and submission so the branding remains
+consistent across environments.
+
 It uses the public WCA API:
 
 - `GET /api/v0/competitions` — upcoming competitions (filtered by country, then
