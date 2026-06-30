@@ -123,8 +123,10 @@ def search_wca_competitions_handler(
         list[str] | None,
         Field(
             description=(
-                "Optional supported regions to search. Defaults to Washington, "
-                "Oregon, and British Columbia."
+                "Optional U.S. states or Canadian provinces/territories to "
+                "search by full name or postal abbreviation. Defaults to "
+                "Washington, Oregon, and British Columbia. Use United States "
+                "or Canada to search every supported subdivision in a country."
             )
         ),
     ] = None,

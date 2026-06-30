@@ -5,7 +5,8 @@ import time
 import unittest
 from datetime import date, datetime, timezone
 
-from wca_comps.config import REGIONS
+from wca_comps.cli import parse_args
+from wca_comps.config import CANADA_REGIONS, DEFAULT_REGIONS, REGIONS, US_REGIONS
 from wca_comps.errors import InputValidationError
 from wca_comps.models import Competition, RegistrationStatus
 from wca_comps.networking import WCAClient
@@ -32,11 +33,52 @@ class ValidationTests(unittest.TestCase):
             parse_from_date("08/02/2026")
 
     def test_regions_are_selected_and_deduped(self) -> None:
-        selected = select_regions(["washington", "Oregon", "Washington"])
-        self.assertEqual([region.name for region in selected], ["Washington", "Oregon"])
+        selected = select_regions(
+            ["washington", "WA", "OR", "Washington", "bc"]
+        )
+        self.assertEqual(
+            [region.name for region in selected],
+            ["Washington", "Oregon", "British Columbia"],
+        )
 
         with self.assertRaises(InputValidationError):
-            select_regions(["California"])
+            select_regions(["Mexico City"])
+
+    def test_default_regions_remain_pacific_northwest(self) -> None:
+        self.assertEqual(
+            [region.name for region in select_regions(None)],
+            ["Washington", "Oregon", "British Columbia"],
+        )
+
+    def test_all_us_and_canadian_subdivisions_are_supported(self) -> None:
+        self.assertEqual(len(US_REGIONS), 51)
+        self.assertEqual(len(CANADA_REGIONS), 13)
+        self.assertEqual(len(REGIONS), 64)
+        self.assertIn("California", {region.name for region in US_REGIONS})
+        self.assertIn("Ontario", {region.name for region in CANADA_REGIONS})
+        self.assertIn("Nunavut", {region.name for region in CANADA_REGIONS})
+
+        selected = select_regions(["United States", "Canada"])
+        self.assertEqual(len(selected), 64)
+
+    def test_city_matching_uses_exact_subdivision_component(self) -> None:
+        regions = {region.name: region for region in REGIONS}
+
+        self.assertTrue(regions["Virginia"].matches_city("Richmond, Virginia"))
+        self.assertFalse(
+            regions["Virginia"].matches_city("Charleston, West Virginia")
+        )
+        self.assertFalse(
+            regions["Washington"].matches_city("Washington, D.C.")
+        )
+        self.assertTrue(
+            regions["District of Columbia"].matches_city("Washington, D.C.")
+        )
+        self.assertTrue(regions["Quebec"].matches_city("Montréal, Québec"))
+
+    def test_cli_accepts_repeated_regions(self) -> None:
+        args = parse_args(["--region", "California", "--region", "ON"])
+        self.assertEqual(args.regions, ["California", "ON"])
 
 
 class AssessmentTests(unittest.TestCase):
@@ -47,7 +89,7 @@ class AssessmentTests(unittest.TestCase):
         assessments = build_assessments(
             service,
             registrations,
-            REGIONS[:1],
+            DEFAULT_REGIONS[:1],
             "2023VONT01",
             date(2026, 1, 1),
             max_registration_workers=4,
@@ -63,7 +105,7 @@ class AssessmentTests(unittest.TestCase):
         assessments = build_assessments(
             service,
             registrations,
-            REGIONS[:1],
+            DEFAULT_REGIONS[:1],
             "2023VONT01",
             date(2026, 1, 1),
             now=datetime(2026, 1, 1, tzinfo=timezone.utc),

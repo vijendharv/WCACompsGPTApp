@@ -79,9 +79,10 @@ def render_text(
 ) -> str:
     """Render assessments as a readable plain-text report."""
     lines: list[str] = []
+    region_label = _region_label(assessments)
     lines.append("=" * 78)
     lines.append(
-        f"Upcoming WCA competitions (WA / OR / BC) for {person_name} ({wca_id})"
+        f"Upcoming WCA competitions ({region_label}) for {person_name} ({wca_id})"
     )
     lines.append("=" * 78)
 
@@ -156,11 +157,17 @@ def _group(
     return registered, can_register, cannot
 
 
+def _region_label(assessments: list[CompetitionAssessment]) -> str:
+    names = dict.fromkeys(assessment.region_name for assessment in assessments)
+    return " / ".join(names) if names else "selected regions"
+
+
 def render_html(
     assessments: list[CompetitionAssessment], person_name: str, wca_id: str
 ) -> str:
     """Render assessments as a responsive, email-client-safe HTML report."""
     registered, can_register, cannot = _group(assessments)
+    region_label = _region_label(assessments)
 
     def card(a: CompetitionAssessment, accent: str) -> str:
         c = a.competition
@@ -230,7 +237,7 @@ def render_html(
         '<h1 style="font-size:20px;color:#111827;margin:0 0 4px;">'
         "Upcoming WCA competitions</h1>"
         f'<div style="color:#6b7280;font-size:13px;margin-bottom:4px;">'
-        f"WA / OR / BC &middot; {escape(person_name)} ({escape(wca_id)})</div>"
+        f"{escape(region_label)} &middot; {escape(person_name)} ({escape(wca_id)})</div>"
         f'<div style="color:#6b7280;font-size:12px;margin-bottom:8px;">{summary}</div>'
         f'{section("Already registered", registered, "#10b981")}'
         f'{section("Can register (open, not yet registered)", can_register, "#3b82f6")}'

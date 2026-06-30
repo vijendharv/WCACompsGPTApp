@@ -1,9 +1,10 @@
 # WCA Competition Finder
 
 Finds upcoming [World Cube Association](https://www.worldcubeassociation.org/)
-competitions in **Washington**, **Oregon**, and **British Columbia** and checks
-whether a given competitor (default: *Saharsh Sai Vontela*, WCA ID `2023VONT01`)
-is registered for them.
+competitions across all U.S. states and Canadian provinces/territories and
+checks whether a given competitor (default: *Saharsh Sai Vontela*, WCA ID
+`2023VONT01`) is registered for them. Searches default to **Washington**,
+**Oregon**, and **British Columbia** when no regions are supplied.
 
 The canonical ChatGPT app icon is stored at
 [`assets/wca-competition-finder-icon.png`](assets/wca-competition-finder-icon.png).
@@ -54,8 +55,10 @@ Important details:
   resolved at request/runtime, not at server startup or module import time.
 - WCA IDs are normalized to uppercase and must match the WCA ID format, for
   example `2023VONT01`.
-- Supported regions are currently `Washington`, `Oregon`, and
-  `British Columbia`; region names are matched case-insensitively.
+- Supported regions include all 50 U.S. states, the District of Columbia, all
+  10 Canadian provinces, and all 3 Canadian territories. Full names and postal
+  abbreviations are matched case-insensitively. Omitted regions default to
+  `Washington`, `Oregon`, and `British Columbia`.
 - Competition list and public WCIF responses are cached for 60 seconds by
   default in `WCAClient`. Pass `cache_ttl_seconds=0` to disable caching, such
   as in tests or freshness debugging.
@@ -78,6 +81,11 @@ payload = search_competitions(
     from_date=None,
 )
 ```
+
+For example, `regions=["California", "ON", "Québec"]` searches California,
+Ontario, and Quebec. Exact subdivision matching prevents names such as
+`Virginia` from also matching `West Virginia`. Use `regions=["United States"]`
+or `regions=["Canada"]` to search every supported subdivision in that country.
 
 The returned payload is JSON-ready and backs the `search_wca_competitions` MCP
 tool. If no matching competitions are found, the structured search path raises
@@ -105,6 +113,8 @@ Tool behavior:
 
 - `search_wca_competitions` takes `wca_id`, optional `person_name`, optional
   `regions`, and optional `from_date`.
+- `regions` accepts U.S. state and Canadian province/territory names or postal
+  abbreviations; omitted regions retain the Pacific Northwest defaults.
 - `from_date` defaults at request time when omitted or `null`.
 - `search_wca_competitions` is annotated with `readOnlyHint: true` and
   `openWorldHint: true`.
@@ -245,6 +255,9 @@ python -m wca_comps.cli --from-date 2026-08-01
 
 # Also email the report (in addition to printing it)
 python -m wca_comps.cli --email-to vontelav@gmail.com
+
+# Search other supported regions; repeat --region as needed
+python -m wca_comps.cli --region California --region ON
 ```
 
 Output is grouped into **Already registered**, **Can register (open, not yet

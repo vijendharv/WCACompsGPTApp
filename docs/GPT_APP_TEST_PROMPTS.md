@@ -21,6 +21,33 @@ Show upcoming WCA competitions in Washington for WCA ID 2023VONT01.
 
 Verify that every returned competition is in Washington.
 
+## Expanded Region Search
+
+```text
+Show upcoming WCA competitions in California, Ontario, and Quebec for WCA ID 2023VONT01.
+```
+
+Verify that the app accepts regions outside the default Pacific Northwest set
+and returns results only from the requested subdivisions.
+
+## Postal Abbreviations
+
+```text
+Find upcoming WCA competitions in TX, NY, ON, and BC for WCA ID 2023VONT01.
+```
+
+Verify that postal abbreviations resolve to Texas, New York, Ontario, and
+British Columbia.
+
+## Country-Wide Search
+
+```text
+Find upcoming WCA competitions across Canada for WCA ID 2023VONT01.
+```
+
+Verify that the app searches all Canadian provinces and territories rather
+than falling back to the default Pacific Northwest regions.
+
 ## Registration Status
 
 ```text
@@ -68,11 +95,11 @@ results or exposing an internal traceback.
 ## Unsupported Region
 
 ```text
-Find upcoming WCA competitions in California for WCA ID 2023VONT01.
+Find upcoming WCA competitions in Mexico City for WCA ID 2023VONT01.
 ```
 
-Verify that the app explains that the supported regions are Washington, Oregon,
-and British Columbia.
+Verify that the app explains that searches support U.S. states, District of
+Columbia, and Canadian provinces/territories.
 
 ## No Results
 
@@ -95,8 +122,8 @@ Verify that ChatGPT asks for a WCA ID before searching.
 
 1. Run Basic Search to confirm public WCA API access.
 2. Run Widget Rendering to confirm the search-to-render handoff.
-3. Run Single-Region Search and Date Filtering to verify filters.
+3. Run Single-Region Search, Expanded Region Search, Postal Abbreviations,
+   Country-Wide Search, and Date Filtering to verify filters.
 4. Run Registration Status and Eligibility Explanation to inspect result quality.
 5. Run the invalid, unsupported-region, no-results, and missing-input prompts to
    verify error handling.
-
