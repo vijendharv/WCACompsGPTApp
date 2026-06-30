@@ -101,7 +101,7 @@ widget resource.
 
 | Tool | Purpose |
 | --- | --- |
-| `search_wca_people` | Search the public WCA directory by name and return up to 20 candidates with WCA IDs. |
+| `search_wca_people` | Search the public WCA directory by name, returning up to 20 candidates or requesting a narrower search. |
 | `search_wca_competitions` | Find upcoming WCA competitions in supported regions and assess public registration/eligibility for a WCA ID. |
 | `render_competition_results` | Render a prepared `search_wca_competitions` result as responsive grouped competition cards. |
 
@@ -119,6 +119,9 @@ Tool behavior:
   is returned.
 - `search_wca_people` returns no more than 20 candidates. Accounts without a
   WCA ID are omitted because they cannot be used for registration lookup.
+- If more than 20 people match, `search_wca_people` returns
+  `refinement_required: true` without a partial candidate list. Ask the user
+  for a more complete name or their WCA ID, then search again.
 - `search_wca_competitions` takes `wca_id`, optional `person_name`, optional
   `regions`, and optional `from_date`.
 - `regions` accepts U.S. state and Canadian province/territory names or postal

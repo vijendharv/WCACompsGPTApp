@@ -139,11 +139,15 @@ Open the local URL printed by Inspector, then:
 }
 ```
 
-The result should contain `query`, `count`, `selection_required`, and no more
-than 20 `candidates`. Each candidate includes a WCA ID and official profile
-URL. Accounts without WCA IDs are excluded. In ChatGPT, present these
-candidates and ask the user to choose the correct ID; do not continue to a
-competition search automatically.
+The result should contain `query`, `count`, `selection_required`,
+`refinement_required`, `message`, and no more than 20 `candidates`. Each
+candidate includes a WCA ID and official profile URL. Accounts without WCA IDs
+are excluded. In ChatGPT, present these candidates and ask the user to choose
+the correct ID; do not continue to a competition search automatically.
+
+Also try a broad name that produces more than 20 matches. The result should set
+`refinement_required` to `true`, return no partial candidate list, and direct
+ChatGPT to ask for a more complete name or WCA ID before searching again.
 
 Next, select `search_wca_competitions` and use the WCA ID chosen from the
 person-search result:

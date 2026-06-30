@@ -77,7 +77,10 @@ class MCPServerTests(unittest.TestCase):
             self.assertIn("name", tool.inputSchema["properties"])
             self.assertIn("candidates", tool.outputSchema["properties"])
             self.assertIn("selection_required", tool.outputSchema["properties"])
+            self.assertIn("refinement_required", tool.outputSchema["properties"])
+            self.assertIn("message", tool.outputSchema["properties"])
             self.assertIn("never choose", tool.description)
+            self.assertIn("more complete name", tool.description)
 
         asyncio.run(run())
 
@@ -172,6 +175,8 @@ class MCPServerTests(unittest.TestCase):
                 "query": "Jane Cuber",
                 "count": 1,
                 "selection_required": True,
+                "refinement_required": False,
+                "message": None,
                 "candidates": [
                     {
                         "name": "Jane Cuber",
@@ -191,6 +196,32 @@ class MCPServerTests(unittest.TestCase):
 
             self.assertEqual(structured, payload)
             self.assertEqual(json.loads(content[0].text), payload)
+
+        asyncio.run(run())
+
+    def test_people_search_tool_returns_refinement_instruction(self) -> None:
+        async def run() -> None:
+            server = create_mcp_server()
+            payload = {
+                "query": "John",
+                "count": 0,
+                "selection_required": False,
+                "refinement_required": True,
+                "message": (
+                    "More than 20 people matched. Ask the user for a more "
+                    "complete name or their WCA ID, then search again."
+                ),
+                "candidates": [],
+            }
+            with patch("wca_comps.mcp_server.search_people", return_value=payload):
+                _content, structured = await server.call_tool(
+                    "search_wca_people",
+                    {"name": "John"},
+                )
+
+            self.assertTrue(structured["refinement_required"])
+            self.assertFalse(structured["selection_required"])
+            self.assertEqual(structured["candidates"], [])
 
         asyncio.run(run())
 

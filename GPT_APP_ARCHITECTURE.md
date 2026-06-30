@@ -41,6 +41,9 @@ flowchart TD
 Search the public WCA directory when the user provides a name but no WCA ID.
 Return at most 20 candidates containing the person's name, WCA ID, country when
 available, and official profile URL. Exclude accounts without a WCA ID.
+If more than 20 people match, return a refinement-required result without a
+partial candidate list. ChatGPT must ask for a more complete name or WCA ID
+before searching again.
 
 The result is an identity-selection step, not authorization to choose a person.
 ChatGPT must present the candidates and wait for the user to select the correct

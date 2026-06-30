@@ -27,7 +27,9 @@ SERVER_INSTRUCTIONS = (
     "check public registration status for a WCA ID, and explain registration "
     "eligibility. If the user gives a name without a WCA ID, first call "
     "search_wca_people, show its candidates, and ask the user to choose the "
-    "correct WCA ID. Never select an identity on the user's behalf. The search "
+    "correct WCA ID. If refinement_required is true, ask for a more complete "
+    "name or WCA ID and search again. Never select an identity on the user's "
+    "behalf. The search "
     "tools are read-only and use public WCA data. "
     "After render_competition_results returns, treat its widget as the complete "
     "user-facing result. Do not repeat its competition rows, summary, or table "
@@ -52,6 +54,8 @@ class SearchWCAPeopleResult(BaseModel):
     query: str
     count: int
     selection_required: bool
+    refinement_required: bool
+    message: str | None = None
     candidates: list[WCAPersonCandidate]
 
 
@@ -140,7 +144,8 @@ def search_wca_people_handler(
         Field(
             description=(
                 "Person name to search in the public WCA directory. Returns at "
-                "most 20 candidates with WCA IDs for the user to choose from."
+                "most 20 candidates with WCA IDs for the user to choose from. "
+                "When more than 20 people match, asks for a narrower search."
             )
         ),
     ],
@@ -278,9 +283,10 @@ def create_mcp_server() -> FastMCP:
         title="Search WCA people",
         description=(
             "Search the public WCA directory by person name and return at most "
-            "20 candidates. Present the candidates and ask the user to choose "
-            "the correct WCA ID before searching competitions; never choose "
-            "an identity automatically."
+            "20 candidates. When refinement_required is true, ask the user for "
+            "a more complete name or WCA ID and search again. Otherwise, present "
+            "the candidates and ask the user to choose the correct WCA ID before "
+            "searching competitions; never choose an identity automatically."
         ),
         annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True),
         structured_output=True,

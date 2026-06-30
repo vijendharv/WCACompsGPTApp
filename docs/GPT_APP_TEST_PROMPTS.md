@@ -33,6 +33,10 @@ Verify that ChatGPT searches for people first, returns at most 20 matching
 identities, and pauses for an explicit WCA ID selection. It must not infer the
 person from name, country, result order, or apparent likelihood.
 
+If the search matches more than 20 people, verify that ChatGPT does not display
+a partial candidate list. It should ask for a more complete name or WCA ID and
+then run a new person search with the refined value.
+
 ## Basic Search
 
 ```text
