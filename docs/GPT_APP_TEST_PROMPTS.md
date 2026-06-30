@@ -4,6 +4,35 @@ Use these prompts in a new ChatGPT conversation with **WCA Competition
 Finder** enabled. WCA competition and registration data changes over time, so
 verify behavior and result structure rather than exact counts.
 
+## Name Search And Identity Selection
+
+```text
+Find my WCA profile. My name is Saharsh Sai Vontela.
+```
+
+Verify that ChatGPT calls `search_wca_people`, shows no more than 20 candidates
+with their WCA IDs, and asks the user to choose the correct ID. It must not
+automatically choose a candidate or search competitions yet.
+
+After choosing an ID, reply with:
+
+```text
+Use WCA ID 2023VONT01 and show upcoming competitions in Washington.
+```
+
+Verify that ChatGPT then calls `search_wca_competitions` with the explicitly
+selected ID.
+
+## Ambiguous Name Search
+
+```text
+Find upcoming WCA competitions for Chris Smith in California.
+```
+
+Verify that ChatGPT searches for people first, returns at most 20 matching
+identities, and pauses for an explicit WCA ID selection. It must not infer the
+person from name, country, result order, or apparent likelihood.
+
 ## Basic Search
 
 ```text
@@ -116,14 +145,17 @@ not fabricate results.
 Find upcoming WCA competitions in Washington for me.
 ```
 
-Verify that ChatGPT asks for a WCA ID before searching.
+Verify that ChatGPT asks for a WCA ID or the person's name. If a name is then
+provided, it should run the person search and ask the user to choose an ID.
 
 ## Suggested Test Order
 
-1. Run Basic Search to confirm public WCA API access.
-2. Run Widget Rendering to confirm the search-to-render handoff.
-3. Run Single-Region Search, Expanded Region Search, Postal Abbreviations,
+1. Run Name Search And Identity Selection to confirm the two-step identity flow.
+2. Run Basic Search to confirm public WCA API access.
+3. Run Widget Rendering to confirm the search-to-render handoff.
+4. Run Single-Region Search, Expanded Region Search, Postal Abbreviations,
    Country-Wide Search, and Date Filtering to verify filters.
-4. Run Registration Status and Eligibility Explanation to inspect result quality.
-5. Run the invalid, unsupported-region, no-results, and missing-input prompts to
+5. Run Registration Status and Eligibility Explanation to inspect result quality.
+6. Run the ambiguous-name, invalid, unsupported-region, no-results, and
+   missing-input prompts to
    verify error handling.

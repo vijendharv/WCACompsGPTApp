@@ -46,7 +46,7 @@ python -m unittest discover -s tests
 Expected result:
 
 ```text
-Ran 14 tests
+Ran 27 tests
 OK
 ```
 
@@ -88,6 +88,7 @@ PY
 Expected output should include:
 
 ```text
+search_wca_people
 search_wca_competitions
 render_competition_results
 competition_results_widget
@@ -128,9 +129,24 @@ npx @modelcontextprotocol/inspector .venv/bin/python -m wca_comps.mcp_server
 Open the local URL printed by Inspector, then:
 
 1. Go to the tools view.
-2. Select `search_wca_competitions`.
+2. Select `search_wca_people`.
 3. Switch the input editor to JSON if Inspector is showing form fields.
 4. Use this sample payload:
+
+```json
+{
+  "name": "Saharsh Sai Vontela"
+}
+```
+
+The result should contain `query`, `count`, `selection_required`, and no more
+than 20 `candidates`. Each candidate includes a WCA ID and official profile
+URL. Accounts without WCA IDs are excluded. In ChatGPT, present these
+candidates and ask the user to choose the correct ID; do not continue to a
+competition search automatically.
+
+Next, select `search_wca_competitions` and use the WCA ID chosen from the
+person-search result:
 
 ```json
 {

@@ -36,6 +36,22 @@ flowchart TD
 
 ## Proposed MCP tools
 
+### `search_wca_people`
+
+Search the public WCA directory when the user provides a name but no WCA ID.
+Return at most 20 candidates containing the person's name, WCA ID, country when
+available, and official profile URL. Exclude accounts without a WCA ID.
+
+The result is an identity-selection step, not authorization to choose a person.
+ChatGPT must present the candidates and wait for the user to select the correct
+WCA ID before calling `search_wca_competitions`, even if only one candidate is
+returned.
+
+Annotations:
+
+- `readOnlyHint: true`
+- `openWorldHint: true`
+
 ### `search_wca_competitions`
 
 Find competitions and assess registration status for a competitor.
@@ -238,6 +254,8 @@ Important scenarios:
 
 ### Milestone 2 — Read-only MCP server
 
+- Implement `search_wca_people` with a 20-candidate limit and explicit user
+  selection before competition lookup.
 - Implement `search_wca_competitions`.
 - Add MCP schemas, metadata, annotations, and error handling.
 - Verify behavior with MCP Inspector.
