@@ -30,6 +30,7 @@ The code is decomposed into small, single-responsibility modules:
 | `wca_comps/validation.py`    | Runtime validation for WCA IDs, dates, and supported regions.   |
 | `wca_comps/serializers.py`   | Stable JSON-ready result schemas for app/MCP consumers.         |
 | `wca_comps/search.py`        | Validated structured search workflow for MCP tools.             |
+| `wca_comps/people.py`        | Public WCA person-name lookup with capped identity candidates.   |
 | `wca_comps/mcp_server.py`    | Read-only MCP server exposing search/render tools and widget resource. |
 | `wca_comps/errors.py`        | Typed application errors for validation, no results, upstreams. |
 | `wca_comps/competitions.py`  | Fetch upcoming competitions and filter them by region.          |
@@ -95,11 +96,12 @@ a typed no-results error instead of returning an empty successful payload.
 
 The project includes a read-only MCP server using the official Python `mcp`
 SDK. It currently implements the read-only MVP pieces from milestones 2 and 3:
-one data-search tool, one widget-render tool, and one registered ChatGPT Apps
+two data-search tools, one widget-render tool, and one registered ChatGPT Apps
 widget resource.
 
 | Tool | Purpose |
 | --- | --- |
+| `search_wca_people` | Search the public WCA directory by name, returning up to 20 candidates or requesting a narrower search. |
 | `search_wca_competitions` | Find upcoming WCA competitions in supported regions and assess public registration/eligibility for a WCA ID. |
 | `render_competition_results` | Render a prepared `search_wca_competitions` result as responsive grouped competition cards. |
 
@@ -111,12 +113,21 @@ Registered resource:
 
 Tool behavior:
 
+- If a user supplies a name without a WCA ID, call `search_wca_people`, present
+  its candidates, and ask the user to choose the correct WCA ID. The app must
+  not infer or automatically select an identity, even when only one candidate
+  is returned.
+- `search_wca_people` returns no more than 20 candidates. Accounts without a
+  WCA ID are omitted because they cannot be used for registration lookup.
+- If more than 20 people match, `search_wca_people` returns
+  `refinement_required: true` without a partial candidate list. Ask the user
+  for a more complete name or their WCA ID, then search again.
 - `search_wca_competitions` takes `wca_id`, optional `person_name`, optional
   `regions`, and optional `from_date`.
 - `regions` accepts U.S. state and Canadian province/territory names or postal
   abbreviations; omitted regions retain the Pacific Northwest defaults.
 - `from_date` defaults at request time when omitted or `null`.
-- `search_wca_competitions` is annotated with `readOnlyHint: true` and
+- Both search tools are annotated with `readOnlyHint: true` and
   `openWorldHint: true`.
 - `render_competition_results` takes a prepared structured search result and
   does not refetch WCA data.

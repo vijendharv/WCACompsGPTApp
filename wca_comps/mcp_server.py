@@ -15,6 +15,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from .errors import InputValidationError, NoResultsError, UpstreamServiceError
+from .people import search_people
 from .search import search_competitions
 
 SERVER_NAME = "WCA Competition Finder"
@@ -24,11 +25,38 @@ WIDGET_HTML_PATH = Path(__file__).resolve().parent.parent / "public" / "competit
 SERVER_INSTRUCTIONS = (
     "Use this server to find upcoming World Cube Association competitions, "
     "check public registration status for a WCA ID, and explain registration "
-    "eligibility. The search tool is read-only and uses public WCA API data. "
+    "eligibility. If the user gives a name without a WCA ID, first call "
+    "search_wca_people, show its candidates, and ask the user to choose the "
+    "correct WCA ID. If refinement_required is true, ask for a more complete "
+    "name or WCA ID and search again. Never select an identity on the user's "
+    "behalf. The search "
+    "tools are read-only and use public WCA data. "
     "After render_competition_results returns, treat its widget as the complete "
     "user-facing result. Do not repeat its competition rows, summary, or table "
     "unless the user explicitly asks for a text version."
 )
+
+
+class WCAPersonCandidate(BaseModel):
+    """A public WCA identity candidate returned by a name search."""
+
+    name: str
+    wca_id: str
+    country: str | None = None
+    profile_url: str
+
+
+class SearchWCAPeopleResult(BaseModel):
+    """Structured output for the search_wca_people MCP tool."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    query: str
+    count: int
+    selection_required: bool
+    refinement_required: bool
+    message: str | None = None
+    candidates: list[WCAPersonCandidate]
 
 
 class QueryResult(BaseModel):
@@ -108,6 +136,29 @@ class SearchWCACompetitionsResult(BaseModel):
     summary: SummaryResult
     groups: GroupedCompetitionResults
     competitions: list[CompetitionAssessmentResult]
+
+
+def search_wca_people_handler(
+    name: Annotated[
+        str,
+        Field(
+            description=(
+                "Person name to search in the public WCA directory. Returns at "
+                "most 20 candidates with WCA IDs for the user to choose from. "
+                "When more than 20 people match, asks for a narrower search."
+            )
+        ),
+    ],
+) -> SearchWCAPeopleResult:
+    """Find public WCA identity candidates without choosing one."""
+    try:
+        payload = search_people(name)
+    except InputValidationError as exc:
+        raise _tool_error(exc.code, str(exc), field=exc.field) from exc
+    except UpstreamServiceError as exc:
+        raise _tool_error(exc.code, str(exc)) from exc
+
+    return SearchWCAPeopleResult.model_validate(payload)
 
 
 def search_wca_competitions_handler(
@@ -227,6 +278,19 @@ def create_mcp_server() -> FastMCP:
         mime_type=WIDGET_MIME_TYPE,
         meta=_widget_resource_meta(),
     )(_competition_results_widget_html)
+    server.tool(
+        name="search_wca_people",
+        title="Search WCA people",
+        description=(
+            "Search the public WCA directory by person name and return at most "
+            "20 candidates. When refinement_required is true, ask the user for "
+            "a more complete name or WCA ID and search again. Otherwise, present "
+            "the candidates and ask the user to choose the correct WCA ID before "
+            "searching competitions; never choose an identity automatically."
+        ),
+        annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True),
+        structured_output=True,
+    )(search_wca_people_handler)
     server.tool(
         name="search_wca_competitions",
         title="Search WCA competitions",

@@ -14,6 +14,7 @@ from wca_comps.mcp_server import (
     WIDGET_MIME_TYPE,
     WIDGET_RESOURCE_URI,
     create_mcp_server,
+    search_wca_people_handler,
     search_wca_competitions_handler,
 )
 
@@ -50,7 +51,7 @@ class MCPServerTests(unittest.TestCase):
             server = create_mcp_server()
             tools = await server.list_tools()
 
-            self.assertEqual(len(tools), 2)
+            self.assertEqual(len(tools), 3)
             tool = next(tool for tool in tools if tool.name == "search_wca_competitions")
             self.assertEqual(tool.name, "search_wca_competitions")
             self.assertTrue(tool.annotations.readOnlyHint)
@@ -61,6 +62,25 @@ class MCPServerTests(unittest.TestCase):
             self.assertIn("summary", tool.outputSchema["properties"])
             self.assertIn("groups", tool.outputSchema["properties"])
             self.assertIn("competitions", tool.outputSchema["properties"])
+
+        asyncio.run(run())
+
+    def test_people_search_tool_schema_and_annotations(self) -> None:
+        async def run() -> None:
+            server = create_mcp_server()
+            tools = await server.list_tools()
+
+            tool = next(tool for tool in tools if tool.name == "search_wca_people")
+            self.assertTrue(tool.annotations.readOnlyHint)
+            self.assertTrue(tool.annotations.openWorldHint)
+            self.assertIsNone(tool.meta)
+            self.assertIn("name", tool.inputSchema["properties"])
+            self.assertIn("candidates", tool.outputSchema["properties"])
+            self.assertIn("selection_required", tool.outputSchema["properties"])
+            self.assertIn("refinement_required", tool.outputSchema["properties"])
+            self.assertIn("message", tool.outputSchema["properties"])
+            self.assertIn("never choose", tool.description)
+            self.assertIn("more complete name", tool.description)
 
         asyncio.run(run())
 
@@ -148,6 +168,63 @@ class MCPServerTests(unittest.TestCase):
 
         asyncio.run(run())
 
+    def test_people_search_tool_returns_structured_candidates(self) -> None:
+        async def run() -> None:
+            server = create_mcp_server()
+            payload = {
+                "query": "Jane Cuber",
+                "count": 1,
+                "selection_required": True,
+                "refinement_required": False,
+                "message": None,
+                "candidates": [
+                    {
+                        "name": "Jane Cuber",
+                        "wca_id": "2020CUBE01",
+                        "country": "United States",
+                        "profile_url": (
+                            "https://www.worldcubeassociation.org/persons/2020CUBE01"
+                        ),
+                    }
+                ],
+            }
+            with patch("wca_comps.mcp_server.search_people", return_value=payload):
+                content, structured = await server.call_tool(
+                    "search_wca_people",
+                    {"name": "Jane Cuber"},
+                )
+
+            self.assertEqual(structured, payload)
+            self.assertEqual(json.loads(content[0].text), payload)
+
+        asyncio.run(run())
+
+    def test_people_search_tool_returns_refinement_instruction(self) -> None:
+        async def run() -> None:
+            server = create_mcp_server()
+            payload = {
+                "query": "John",
+                "count": 0,
+                "selection_required": False,
+                "refinement_required": True,
+                "message": (
+                    "More than 20 people matched. Ask the user for a more "
+                    "complete name or their WCA ID, then search again."
+                ),
+                "candidates": [],
+            }
+            with patch("wca_comps.mcp_server.search_people", return_value=payload):
+                _content, structured = await server.call_tool(
+                    "search_wca_people",
+                    {"name": "John"},
+                )
+
+            self.assertTrue(structured["refinement_required"])
+            self.assertFalse(structured["selection_required"])
+            self.assertEqual(structured["candidates"], [])
+
+        asyncio.run(run())
+
     def test_render_tool_returns_prepared_result_without_refetching(self) -> None:
         async def run() -> None:
             server = create_mcp_server()
@@ -174,6 +251,18 @@ class MCPServerTests(unittest.TestCase):
         payload = json.loads(str(raised.exception))
         self.assertEqual(payload["code"], "invalid_input")
         self.assertEqual(payload["field"], "wca_id")
+
+    def test_people_handler_converts_validation_errors_to_typed_tool_errors(self) -> None:
+        with patch(
+            "wca_comps.mcp_server.search_people",
+            side_effect=InputValidationError("name", "must be longer"),
+        ):
+            with self.assertRaises(ToolError) as raised:
+                search_wca_people_handler(name="A")
+
+        payload = json.loads(str(raised.exception))
+        self.assertEqual(payload["code"], "invalid_input")
+        self.assertEqual(payload["field"], "name")
 
 
 def _sample_payload() -> dict:
