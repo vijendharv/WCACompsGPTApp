@@ -10,7 +10,6 @@ from .competitions import CompetitionService
 from .config import (
     DEFAULT_PERSON_NAME,
     DEFAULT_WCA_ID,
-    REGIONS,
     RESEND_API_KEY_ENV,
     RESEND_API_KEY_FALLBACK,
 )
@@ -19,15 +18,25 @@ from .notify import EmailError, send_email
 from .registrations import RegistrationService
 from .report import build_assessments, render_html, render_text
 from .errors import InputValidationError
-from .validation import parse_from_date, validate_wca_id
+from .validation import parse_from_date, select_regions, validate_wca_id
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Find upcoming WCA competitions in Washington, Oregon and British "
-            "Columbia and check whether a given competitor is registered."
+            "Find upcoming WCA competitions in U.S. states and Canadian "
+            "provinces/territories and check whether a competitor is registered."
         )
+    )
+    parser.add_argument(
+        "--region",
+        action="append",
+        dest="regions",
+        help=(
+            "State, province, or territory name/postal abbreviation to search. "
+            "Repeat for multiple regions; defaults to Washington, Oregon, and "
+            "British Columbia."
+        ),
     )
     parser.add_argument(
         "--wca-id", default=DEFAULT_WCA_ID, help="WCA ID to check (e.g. 2023VONT01)"
@@ -56,6 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         wca_id = validate_wca_id(args.wca_id)
         start_from = parse_from_date(args.from_date)
+        regions = select_regions(args.regions)
     except InputValidationError as exc:
         print(f"Invalid input: {exc}", file=sys.stderr)
         return 2
@@ -68,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
         assessments = build_assessments(
             competition_service,
             registration_service,
-            REGIONS,
+            regions,
             wca_id,
             start_from,
         )

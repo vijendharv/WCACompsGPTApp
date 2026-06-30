@@ -150,6 +150,21 @@ The result should contain:
 
 This call reaches the live public WCA API.
 
+The `regions` field also accepts any U.S. state, District of Columbia, or
+Canadian province/territory by full name or postal abbreviation. For example:
+
+```json
+{
+  "wca_id": "2023VONT01",
+  "regions": ["California", "ON", "Québec"],
+  "from_date": null
+}
+```
+
+Use `"regions": ["United States"]` or `"regions": ["Canada"]` for a
+country-wide search. Country-wide searches can take longer because registration
+status is checked for every matching competition.
+
 To inspect the registered widget resource:
 
 1. Go to the resources view.

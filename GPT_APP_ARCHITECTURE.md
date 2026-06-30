@@ -54,7 +54,7 @@ Inputs:
 | --- | --- | --- |
 | `wca_id` | Yes | WCA competitor ID to check |
 | `person_name` | No | Optional display name for the result |
-| `regions` | No | Regions to search; defaults to Washington, Oregon, and British Columbia |
+| `regions` | No | U.S. states or Canadian provinces/territories by name or postal abbreviation; `United States` and `Canada` expand country-wide; defaults to Washington, Oregon, and British Columbia |
 | `from_date` | No | Earliest competition date in `YYYY-MM-DD` format; defaults to the current date at request time |
 
 For example, a user can explicitly search from a future date by passing

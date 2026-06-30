@@ -6,10 +6,26 @@ import re
 from datetime import date
 from typing import Iterable
 
-from .config import REGIONS, Region
+from .config import (
+    CANADA_REGIONS,
+    DEFAULT_REGIONS,
+    REGIONS,
+    US_REGIONS,
+    Region,
+    normalize_region_name,
+)
 from .errors import InputValidationError
 
 WCA_ID_RE = re.compile(r"^\d{4}[A-Z]{4}\d{2}$")
+REGION_GROUPS = {
+    "us": US_REGIONS,
+    "usa": US_REGIONS,
+    "unitedstates": US_REGIONS,
+    "allusstates": US_REGIONS,
+    "canada": CANADA_REGIONS,
+    "allcanadianprovinces": CANADA_REGIONS,
+    "allcanadianprovincesandterritories": CANADA_REGIONS,
+}
 
 
 def validate_wca_id(value: str) -> str:
@@ -47,12 +63,20 @@ def select_regions(
 ) -> tuple[Region, ...]:
     """Return supported regions selected by name.
 
-    Region names are matched case-insensitively after trimming whitespace.
+    Region names and postal abbreviations are matched case-insensitively.
     """
     if names is None:
-        return supported_regions
+        supported_names = {region.name for region in supported_regions}
+        defaults = tuple(
+            region for region in DEFAULT_REGIONS if region.name in supported_names
+        )
+        return defaults or supported_regions
 
-    region_by_name = {region.name.casefold(): region for region in supported_regions}
+    region_by_name = {
+        normalize_region_name(alias): region
+        for region in supported_regions
+        for alias in (region.name, *region.state_keywords)
+    }
     selected: list[Region] = []
     seen: set[str] = set()
 
@@ -61,17 +85,27 @@ def select_regions(
             raise InputValidationError(
                 "regions", f"entry {index + 1} must be a supported region name"
             )
-        key = name.strip().casefold()
+        key = normalize_region_name(name.strip())
+        group = REGION_GROUPS.get(key)
+        if group is not None:
+            for region in group:
+                region_key = normalize_region_name(region.name)
+                if region_key not in seen:
+                    selected.append(region)
+                    seen.add(region_key)
+            continue
+
         region = region_by_name.get(key)
         if region is None:
-            supported = ", ".join(region.name for region in supported_regions)
             raise InputValidationError(
                 "regions",
-                f"unsupported region {name!r}; supported regions are {supported}",
+                f"unsupported region {name!r}; use a U.S. state, District of "
+                "Columbia, or Canadian province/territory name or postal abbreviation",
             )
-        if key not in seen:
+        region_key = normalize_region_name(region.name)
+        if region_key not in seen:
             selected.append(region)
-            seen.add(key)
+            seen.add(region_key)
 
     if not selected:
         raise InputValidationError("regions", "must include at least one region")

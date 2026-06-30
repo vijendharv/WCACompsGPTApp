@@ -6,7 +6,7 @@ a different region, person, or API host without touching the rest of the code.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 WCA_API_BASE = "https://www.worldcubeassociation.org/api/v0"
 
@@ -19,9 +19,10 @@ class Region:
     """A geographic region we want to search competitions in.
 
     ``country_iso2`` narrows the (paginated) WCA query server-side, while
-    ``state_keywords`` are matched against a competition's ``city`` string
-    (e.g. ``"Seattle, Washington"``) client-side, because the WCA API has no
-    state/province filter.
+    ``state_keywords`` provide postal and spelling aliases for the final
+    subdivision component of a competition's ``city`` string (for example,
+    ``"Seattle, Washington"``). Matching happens client-side because the WCA
+    API has no state/province filter.
     """
 
     name: str
@@ -29,19 +30,110 @@ class Region:
     state_keywords: tuple[str, ...]
 
     def matches_city(self, city: str) -> bool:
-        city_lower = city.lower()
-        return any(kw.lower() in city_lower for kw in self.state_keywords)
+        subdivision = city.rsplit(",", 1)[-1]
+        normalized = normalize_region_name(subdivision)
+        return any(
+            normalize_region_name(keyword) == normalized
+            for keyword in (self.name, *self.state_keywords)
+        )
 
 
-# The three regions the user cares about.
-REGIONS: tuple[Region, ...] = (
-    Region(name="Washington", country_iso2="US", state_keywords=("Washington",)),
-    Region(name="Oregon", country_iso2="US", state_keywords=("Oregon",)),
-    Region(
-        name="British Columbia",
-        country_iso2="CA",
-        state_keywords=("British Columbia",),
+def normalize_region_name(value: str) -> str:
+    return "".join(character for character in value.casefold() if character.isalnum())
+
+
+def _build_regions(
+    country_iso2: str,
+    definitions: tuple[tuple[str, tuple[str, ...]], ...],
+) -> tuple[Region, ...]:
+    return tuple(
+        Region(name=name, country_iso2=country_iso2, state_keywords=aliases)
+        for name, aliases in definitions
+    )
+
+
+US_REGIONS = _build_regions(
+    "US",
+    (
+        ("Alabama", ("AL",)),
+        ("Alaska", ("AK",)),
+        ("Arizona", ("AZ",)),
+        ("Arkansas", ("AR",)),
+        ("California", ("CA",)),
+        ("Colorado", ("CO",)),
+        ("Connecticut", ("CT",)),
+        ("Delaware", ("DE",)),
+        ("District of Columbia", ("DC", "D.C.")),
+        ("Florida", ("FL",)),
+        ("Georgia", ("GA",)),
+        ("Hawaii", ("HI",)),
+        ("Idaho", ("ID",)),
+        ("Illinois", ("IL",)),
+        ("Indiana", ("IN",)),
+        ("Iowa", ("IA",)),
+        ("Kansas", ("KS",)),
+        ("Kentucky", ("KY",)),
+        ("Louisiana", ("LA",)),
+        ("Maine", ("ME",)),
+        ("Maryland", ("MD",)),
+        ("Massachusetts", ("MA",)),
+        ("Michigan", ("MI",)),
+        ("Minnesota", ("MN",)),
+        ("Mississippi", ("MS",)),
+        ("Missouri", ("MO",)),
+        ("Montana", ("MT",)),
+        ("Nebraska", ("NE",)),
+        ("Nevada", ("NV",)),
+        ("New Hampshire", ("NH",)),
+        ("New Jersey", ("NJ",)),
+        ("New Mexico", ("NM",)),
+        ("New York", ("NY",)),
+        ("North Carolina", ("NC",)),
+        ("North Dakota", ("ND",)),
+        ("Ohio", ("OH",)),
+        ("Oklahoma", ("OK",)),
+        ("Oregon", ("OR",)),
+        ("Pennsylvania", ("PA",)),
+        ("Rhode Island", ("RI",)),
+        ("South Carolina", ("SC",)),
+        ("South Dakota", ("SD",)),
+        ("Tennessee", ("TN",)),
+        ("Texas", ("TX",)),
+        ("Utah", ("UT",)),
+        ("Vermont", ("VT",)),
+        ("Virginia", ("VA",)),
+        ("Washington", ("WA",)),
+        ("West Virginia", ("WV",)),
+        ("Wisconsin", ("WI",)),
+        ("Wyoming", ("WY",)),
     ),
+)
+
+CANADA_REGIONS = _build_regions(
+    "CA",
+    (
+        ("Alberta", ("AB",)),
+        ("British Columbia", ("BC",)),
+        ("Manitoba", ("MB",)),
+        ("New Brunswick", ("NB",)),
+        ("Newfoundland and Labrador", ("NL", "Newfoundland & Labrador")),
+        ("Nova Scotia", ("NS",)),
+        ("Ontario", ("ON",)),
+        ("Prince Edward Island", ("PE", "PEI")),
+        ("Quebec", ("QC", "Québec")),
+        ("Saskatchewan", ("SK",)),
+        ("Northwest Territories", ("NT", "NWT")),
+        ("Nunavut", ("NU",)),
+        ("Yukon", ("YT", "Yukon Territory")),
+    ),
+)
+
+REGIONS: tuple[Region, ...] = (*US_REGIONS, *CANADA_REGIONS)
+
+DEFAULT_REGION_NAMES = ("Washington", "Oregon", "British Columbia")
+DEFAULT_REGIONS = tuple(
+    next(region for region in REGIONS if region.name == name)
+    for name in DEFAULT_REGION_NAMES
 )
 
 # The competitor we want to check registrations for.
